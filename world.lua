@@ -279,7 +279,7 @@ end
 function World:draw_world()
     self:draw_grid()
     -- print score
-    print("score: " .. self.score, 50, 10)
+    print("score: " .. self.score, 90, 10)
 
     -- let's just print a game over message for now
     if self.state == WORLD_STATE.GAME_OVER then
