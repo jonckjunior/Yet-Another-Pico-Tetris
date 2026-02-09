@@ -15,6 +15,8 @@ local WORLD_STATE = {
 ---@field score integer
 ---@field level integer
 ---@field lines_cleared integer
+---@field board_x integer
+---@field board_y integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -43,11 +45,13 @@ function World:new()
     w:create_new_active_piece()
     w.drop_timer = 0
     w.drop_interval = 30
-    w.block_size = 5
+    w.block_size = 6
     w.state = WORLD_STATE.PLAYING
     w.score = 0
     w.level = 1
     w.lines_cleared = 0
+    w.board_x = 25
+    w.board_y = -w.block_size * 1
     return w
 end
 
@@ -64,6 +68,7 @@ end
 
 function World:update_game_over()
     -- TODO: add game over screen
+    if btnp(4) then World:new() end
 end
 
 ---Source of truth for player input during gameplay. For player input during other game states, see other functions.
@@ -273,10 +278,6 @@ end
 ---Draw everything in the world
 function World:draw_world()
     self:draw_grid()
-    -- print bag
-    for i, piece in pairs(self.piece_bag) do
-        print(piece, 50, 10 + i * 6)
-    end
     -- print score
     print("score: " .. self.score, 50, 10)
 
@@ -291,7 +292,8 @@ end
 
 ---Draws the grid on the screen
 function World:draw_grid()
-    for row = 1, #self.grid do
+    --We skip the first two rows
+    for row = 3, #self.grid do
         for column = 1, #self.grid[row] do
             self:draw_block(row, column, self.grid[row][column] or 1)
         end
@@ -321,7 +323,7 @@ function World:draw_ghost_piece()
     for _, block in pairs(self.active_piece.shape) do
         local block_row = ghost_row + block[1]
         local block_column = self.active_piece.column + block[2]
-        self:draw_block(block_row, block_column, self.active_piece.color - 2)
+        self:draw_block(block_row, block_column, 5)
     end
 end
 
@@ -332,10 +334,10 @@ end
 function World:draw_block(row, column, color)
     -- block
     rectfill(
-        (column - 1) * self.block_size, (row - 1) * self.block_size,
-        column * self.block_size - 1, row * self.block_size - 1, color)
+        self.board_x + (column - 1) * self.block_size, self.board_y + (row - 1) * self.block_size,
+        self.board_x + column * self.block_size - 1, self.board_y + row * self.block_size - 1, color)
     -- outline
     rect(
-        (column - 1) * self.block_size, (row - 1) * self.block_size,
-        column * self.block_size - 1, row * self.block_size - 1, color + 1)
+        self.board_x + (column - 1) * self.block_size, self.board_y + (row - 1) * self.block_size,
+        self.board_x + column * self.block_size - 1, self.board_y + row * self.block_size - 1, color + 1)
 end

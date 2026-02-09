@@ -16,6 +16,10 @@ function _update()
     if mode == "playing" then
         world:update_world()
         update_ui()
+
+        if world.state == WORLD_STATE.GAME_OVER and btnp(4) then
+            world = World:new()
+        end
     elseif mode == "menu" then
         update_menu()
     end

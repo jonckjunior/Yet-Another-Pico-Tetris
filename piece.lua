@@ -130,6 +130,16 @@ TETRIS_SHAPES = {
     }
 }
 
+PIECE_COLORS = {
+    I = 9,  -- cyan
+    O = 12, -- yellow
+    T = 8,  -- purple
+    S = 11, -- green
+    Z = 10, -- red
+    J = 6,  -- blue
+    L = 4   -- orange
+}
+
 ---Takes the parameters below to create a TetrisPiece
 ---@param shapeId string
 ---@param rotation integer
@@ -143,7 +153,7 @@ function TetrisPiece:new(shapeId, rotation, row, column)
     p.rotation = rotation
     p.row = row
     p.column = column
-    p.color = 7
+    p.color = PIECE_COLORS[shapeId]
     self.__index = self
     setmetatable(p, self)
     return p
