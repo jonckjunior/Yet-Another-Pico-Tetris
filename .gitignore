@@ -1,0 +1,12 @@
+# Ignore everything by default
+*
+
+# Allow Lua and P8 files
+!*.lua
+!*.p8
+
+# Allow this gitignore file
+!.gitignore
+
+# Allow directories (so git tracks them)
+!*/

@@ -5,10 +5,10 @@ local WORLD_STATE = {
 }
 
 ---@class World
+---@field grid_spr integer
 ---@field grid table
----@field piece_bag table
+---@field piece_queue table
 ---@field active_piece TetrisPiece
----@field drop_timer integer
 ---@field drop_interval integer
 ---@field block_size integer
 ---@field mode WorldState
@@ -17,6 +17,10 @@ local WORLD_STATE = {
 ---@field lines_cleared integer
 ---@field board_x integer
 ---@field board_y integer
+---@field timer table
+---@field das table
+---@field held_piece TetrisPiece
+---@field can_hold boolean
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -27,37 +31,48 @@ function World:new()
     self.__index = self
     setmetatable(w, self)
 
+    w.grid_spr = 8
     -- Initialize grid
     w.grid = {}
     for i = 1, 22 do
         w.grid[i] = {}
         for j = 1, 10 do
-            if DEBUG and i > 19 and j <= 9 then
-                w.grid[i][j] = 7
-            else
-                w.grid[i][j] = 0
-            end
+            w.grid[i][j] = w.grid_spr
         end
     end
 
-    -- Now initialize other fields (piece_bag is initialized in create_new_active_piece)
-    w.piece_bag = {}
-    w:create_new_active_piece()
-    w.drop_timer = 0
+    -- Now initialize other fields
+    w.piece_queue = {}
     w.drop_interval = 30
     w.block_size = 6
     w.state = WORLD_STATE.PLAYING
     w.score = 0
     w.level = 1
     w.lines_cleared = 0
-    w.board_x = 25
+    w.board_x = (127 - #w.grid[1] * w.block_size) / 2
     w.board_y = -w.block_size * 1
+    w.das = {
+        left  = { timer = 0, shift = 0, btn = 0, delta = -1 },
+        right = { timer = 0, shift = 0, btn = 1, delta = 1 }
+    }
+
+    w.held_piece = nil
+    w.can_hold = true
+    w.timer = {
+        soft = 0,
+        drop = 0,
+        hard = 0
+    }
+
+    w:refill_queue()
+    w:refill_queue()
+    w:create_new_active_piece()
     return w
 end
 
 ---Main gameplay loop for the world.
 function World:update_world()
-    self.drop_timer = self.drop_timer + 1
+    self.timer.drop = self.timer.drop + 1
     if self.state == WORLD_STATE.PLAYING then
         self:handle_input_playing()
         self:handle_auto_drop()
@@ -73,44 +88,101 @@ end
 
 ---Source of truth for player input during gameplay. For player input during other game states, see other functions.
 function World:handle_input_playing()
-    if btnp(0) then
-        if self:can_move(0, -1) then
-            self.active_piece.column = self.active_piece.column - 1
+    for _, dir in pairs(self.das) do
+        if btnp(dir.btn) and self:can_move(0, dir.delta) then
+            self.active_piece.column += dir.delta
+        end
+
+        if btn(dir.btn) then
+            dir.timer += 1
+            local delay = (dir.shift == 0) and 10 or 2
+            if dir.timer >= delay then
+                dir.timer = 0
+                dir.shift += 1
+                if self:can_move(0, dir.delta) then
+                    self.active_piece.column += dir.delta
+                end
+            end
+        else
+            dir.timer = 0
+            dir.shift = 0
         end
     end
 
-    if btnp(1) then
-        if self:can_move(0, 1) then
-            self.active_piece.column = self.active_piece.column + 1
+    if btn(3) then
+        self.timer.soft = max(0, self.timer.soft - 1)
+        if self.timer.soft == 0 then
+            self.timer.soft = 3
+            self:update_score("soft_drop", 1)
+            self:try_move_piece_down()
         end
+    else
+        self.timer.soft = 0
     end
 
-    if btnp(2) then
-        self:handle_rotation()
-    end
-
-    if btnp(3) then
-        self:update_score("soft_drop", 1)
-        self:try_move_piece_down()
-    end
-
-    if btnp(4) then
-        -- It starts at 1 because the piece will move down at least 1 row
-        local drop_distance = 1
-        while self:can_move(1, 0) do
-            self.active_piece.row = self.active_piece.row + 1
-            drop_distance = drop_distance + 1
+    -- if the player is holding up and z, we drop
+    if btn(2) and btn(4) then
+        self.timer.hard = max(0, self.timer.hard - 1)
+        if self.timer.hard == 0 then
+            self.timer.hard = 10
+            -- It starts at 1 because the piece will move down at least 1 row
+            local drop_distance = 1
+            while self:can_move(1, 0) do
+                self.active_piece.row = self.active_piece.row + 1
+                drop_distance = drop_distance + 1
+            end
+            self:update_score("hard_drop", drop_distance)
+            self:try_move_piece_down()
         end
-        self:update_score("hard_drop", drop_distance)
-        self:try_move_piece_down()
+    elseif btnp(4) then
+        -- Clockwise rotation
+        self:handle_rotation(0)
+    else
+        self.timer.hard = 0
+    end
+
+    -- if the players is holding up and x, we hold
+    if btn(2) and btn(5) and self.can_hold then
+        self:perform_hold()
+    elseif btnp(5) then
+        self:handle_rotation(-2)
     end
 end
 
+---Swap between the piece held and the active piece. If no piece held, then just insert active piece in held position.
+function World:perform_hold()
+    if not DEBUG then
+        self.can_hold = false
+    end
+
+    if self.held_piece == nil then
+        -- just store the active piece in the held position
+        self.held_piece = self.active_piece
+        self:create_new_active_piece()
+    else
+        -- swap held and active pieces
+        local temp = self.active_piece
+        self.active_piece = self.held_piece
+        self.held_piece = temp
+    end
+    -- always reset the rotation of the held piece
+    self.held_piece.rotation = 1
+
+    -- reset position and rotation of the active piece
+    self.active_piece.row = 1
+    self.active_piece.column = 5
+    self.active_piece.rotation = 1
+
+    -- reset drop timer so it doesn't drop immediately
+    self.timer.drop = 0
+end
+
 ---Handles rotation input. If the piece can't rotate because of a collision, it will try wall kicks. If it still can't rotate, it will revert the rotation.
-function World:handle_rotation()
+---@param rot integer
+function World:handle_rotation(rot)
     local old_rotation = self.active_piece.rotation
     local old_shape = self.active_piece.shape
-    self.active_piece:rotate()
+    self.active_piece:rotate(rot)
 
     if not self:can_move(0, 0) then
         local wall_kicks = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 0, 2 }, { 0, -2 }, { -1, -1 }, { -1, 1 } }
@@ -135,20 +207,24 @@ end
 
 ---Every so often the game will force the active piece down. This is the function that handles that.
 function World:handle_auto_drop()
-    if self.drop_timer == self.drop_interval then
+    if self.timer.drop == self.drop_interval then
         self:try_move_piece_down()
     end
 end
 
 ---Tries to move the piece down. If it can't it will lock the piece on the board.
 function World:try_move_piece_down()
-    self.drop_timer = 0
+    self.timer.drop = 0
     if self:can_move(1, 0) then
         self.active_piece.row = self.active_piece.row + 1
     else
         self:lock_active_piece()
         self:check_line_completion()
         self:create_new_active_piece()
+
+        -- reset hold to the player
+        self.can_hold = true
+
         if not self:can_move(0, 0) then
             self.state = WORLD_STATE.GAME_OVER
             return
@@ -165,13 +241,13 @@ function World:check_line_completion()
     for read_row = rows, 1, -1 do
         local full = true
         for column = 1, columns do
-            if self.grid[read_row][column] == 0 then
+            if self.grid[read_row][column] == self.grid_spr then
                 full = false
                 break
             end
         end
         if full then
-            lines_completed += 1
+            lines_completed = lines_completed + 1
         else
             -- Copy non-full row to bottom
             if write_row ~= read_row then
@@ -185,7 +261,7 @@ function World:check_line_completion()
     -- Clear top rows (now empty space)
     for row = 1, lines_completed do
         for column = 1, columns do
-            self.grid[row][column] = 0
+            self.grid[row][column] = self.grid_spr
         end
     end
     if lines_completed > 0 then
@@ -211,27 +287,27 @@ function World:update_score(score_type, amount)
 end
 
 ---Replenishes the piece bag.
-function World:refresh_piece_bag()
-    self.piece_bag = { "I", "O", "T", "S", "Z", "J", "L" }
-    ---Shuffles the piece bag so that pieces come in random order.
-    for i = #self.piece_bag, 2, -1 do
+function World:refill_queue()
+    local bag = { "I", "O", "T", "S", "Z", "J", "L" }
+    -- Shuffle
+    for i = #bag, 2, -1 do
         local j = flr(rnd(i)) + 1
-        self.piece_bag[i], self.piece_bag[j] = self.piece_bag[j], self.piece_bag[i]
+        bag[i], bag[j] = bag[j], bag[i]
+    end
+    -- Append to queue
+    for p in all(bag) do
+        add(self.piece_queue, p)
     end
 end
 
 ---Assigns a new active piece to the world. If the bag is empty, it replenishes the bag.
 function World:create_new_active_piece()
-    -- when the game starts the bag is empty, so we need to refresh it
-    if #self.piece_bag == 0 then
-        self:refresh_piece_bag()
-    end
-
-    local piece_type = deli(self.piece_bag, 1) -- Take from front
+    local piece_type = deli(self.piece_queue, 1)
     self.active_piece = TetrisPiece:new(piece_type, 1, 1, 5)
 
-    if #self.piece_bag == 0 then
-        self:refresh_piece_bag()
+    -- Ensure enough for 6 previews
+    if #self.piece_queue < 6 then
+        self:refill_queue()
     end
 end
 
@@ -240,7 +316,7 @@ function World:lock_active_piece()
     for _, block in pairs(self.active_piece.shape) do
         local block_row = self.active_piece.row + block[1]
         local block_column = self.active_piece.column + block[2]
-        self.grid[block_row][block_column] = self.active_piece.color
+        self.grid[block_row][block_column] = self.active_piece.spr
     end
 end
 
@@ -259,7 +335,7 @@ function World:can_move(delta_row, delta_column)
         end
 
         -- check if the block collides with existing blocks in the grid
-        if self.grid[block_row][block_column] ~= 0 then
+        if self.grid[block_row][block_column] ~= self.grid_spr then
             return false
         end
     end
@@ -278,8 +354,8 @@ end
 ---Draw everything in the world
 function World:draw_world()
     self:draw_grid()
-    -- print score
-    print("score: " .. self.score, 90, 10)
+    self:draw_next_piece()
+    self:draw_held_piece()
 
     -- let's just print a game over message for now
     if self.state == WORLD_STATE.GAME_OVER then
@@ -290,12 +366,50 @@ function World:draw_world()
     end
 end
 
+function World:draw_held_piece()
+    local delta_row = 5
+    local delta_column = -3
+    print(
+        "hold",
+        self.board_x + (delta_column - 1) * self.block_size,
+        self.board_y + (delta_row - 1) * self.block_size - self.block_size,
+        7
+    )
+    if not self.held_piece then return end
+
+    local held = self.held_piece
+    if held.shapeId == "I" then
+        delta_column = delta_column - 1
+    end
+    for _, block in pairs(held.shape) do
+        self:draw_block(delta_row + block[1], delta_column + block[2], held.spr)
+    end
+end
+
+function World:draw_next_piece()
+    local delta_row = 5
+    local delta_column = 12
+    print(
+        "next",
+        self.board_x + (delta_column - 1) * self.block_size,
+        self.board_y + (delta_row - 1) * self.block_size - self.block_size,
+        7
+    )
+
+    for i = 1, 6 do
+        local next = TetrisPiece:new(self.piece_queue[i], 1, delta_row + (i - 1) * 3, delta_column)
+        for block in all(next.shape) do
+            self:draw_block(next.row + block[1], next.column + block[2], next.spr)
+        end
+    end
+end
+
 ---Draws the grid on the screen
 function World:draw_grid()
     --We skip the first two rows
     for row = 3, #self.grid do
         for column = 1, #self.grid[row] do
-            self:draw_block(row, column, self.grid[row][column] or 1)
+            self:draw_block(row, column, self.grid[row][column] or 8)
         end
     end
 end
@@ -309,7 +423,7 @@ function World:draw_active_piece()
     for _, block in pairs(self.active_piece.shape) do
         local block_row = self.active_piece.row + block[1]
         local block_column = self.active_piece.column + block[2]
-        self:draw_block(block_row, block_column, self.active_piece.color)
+        self:draw_block(block_row, block_column, self.active_piece.spr)
     end
 end
 
@@ -323,21 +437,18 @@ function World:draw_ghost_piece()
     for _, block in pairs(self.active_piece.shape) do
         local block_row = ghost_row + block[1]
         local block_column = self.active_piece.column + block[2]
-        self:draw_block(block_row, block_column, 5)
+        self:draw_block(block_row, block_column, self.active_piece.spr + 16)
     end
 end
 
 ---Draw the block at (row, column)
 ---@param row integer
 ---@param column integer
----@param color integer
-function World:draw_block(row, column, color)
-    -- block
-    rectfill(
-        self.board_x + (column - 1) * self.block_size, self.board_y + (row - 1) * self.block_size,
-        self.board_x + column * self.block_size - 1, self.board_y + row * self.block_size - 1, color)
-    -- outline
-    rect(
-        self.board_x + (column - 1) * self.block_size, self.board_y + (row - 1) * self.block_size,
-        self.board_x + column * self.block_size - 1, self.board_y + row * self.block_size - 1, color + 1)
+---@param sprite_number integer
+function World:draw_block(row, column, sprite_number)
+    spr(
+        sprite_number,
+        self.board_x + (column - 1) * self.block_size,
+        self.board_y + (row - 1) * self.block_size
+    )
 end
