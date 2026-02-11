@@ -23,6 +23,7 @@ local WORLD_STATE = {
 ---@field can_hold boolean
 ---@field is_tspin boolean
 ---@field is_mini_tspin boolean
+---@field last_action string
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -78,55 +79,6 @@ function World:new()
     return w
 end
 
-function World:setup_tspin_test()
-    for i = 1, 22 do
-        for j = 1, 10 do
-            self.grid[i][j] = self.grid_spr
-        end
-    end
-
-    -- fills three bottom rows
-    for i = 20, 22 do
-        for j = 1, 10 do
-            self.grid[i][j] = 5
-        end
-    end
-
-    self.grid[22][3] = self.grid_spr
-    self.grid[21][3] = self.grid_spr
-    self.grid[20][3] = self.grid_spr
-    self.grid[21][2] = self.grid_spr
-    self.grid[20][2] = self.grid_spr
-
-    self.grid[21][4] = self.grid_spr
-
-
-    -- Force next piece to be T
-    self.piece_queue = { "T", "I", "O", "S", "Z", "J", "L" }
-    self:create_new_active_piece()
-end
-
-function World:setup_mini_tspin_test()
-    for i = 1, 22 do
-        for j = 1, 10 do
-            self.grid[i][j] = self.grid_spr
-        end
-    end
-
-    -- fills bottom row
-    for j = 1, 10 do
-        self.grid[22][j] = 5
-    end
-
-    self.grid[21][1] = 5
-    self.grid[20][1] = 5
-    self.grid[22][2] = self.grid_spr
-
-    -- Force next piece to be T
-    self.piece_queue = { "T", "I", "O", "S", "Z", "J", "L" }
-    self:create_new_active_piece()
-end
-
 ---Main gameplay loop for the world.
 function World:update_world()
     self.timer.drop = self.timer.drop + 1
@@ -148,6 +100,7 @@ function World:handle_input_playing()
     for _, dir in pairs(self.das) do
         if btnp(dir.btn) and self:can_move(0, dir.delta) then
             self.active_piece.column += dir.delta
+            self.last_action = "movement"
         end
 
         if btn(dir.btn) then
@@ -158,6 +111,7 @@ function World:handle_input_playing()
                 dir.shift += 1
                 if self:can_move(0, dir.delta) then
                     self.active_piece.column += dir.delta
+                    self.last_action = "movement"
                 end
             end
         else
@@ -194,6 +148,7 @@ function World:handle_input_playing()
     elseif btnp(4) then
         -- Clockwise rotation
         self:handle_rotation(0)
+        self.last_action = "rotation"
     else
         self.timer.hard = 0
     end
@@ -202,7 +157,9 @@ function World:handle_input_playing()
     if btn(2) and btn(5) and self.can_hold then
         self:perform_hold()
     elseif btnp(5) then
+        -- Counterclockwise rotation
         self:handle_rotation(-2)
+        self.last_action = "rotation"
     end
 end
 
@@ -406,7 +363,7 @@ function World:check_tspin()
     self.is_tspin = false
     self.is_mini_tspin = false
 
-    if self.active_piece.spr == 3 then -- T-piece only
+    if self.active_piece.spr == 3 and self.last_action == "rotation" then -- T-piece only
         local pivot_row = self.active_piece.row + 1
         local pivot_col = self.active_piece.column + 1
 

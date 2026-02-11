@@ -3,6 +3,7 @@ version 43
 __lua__
 #include piece.lua
 #include world.lua
+#include setup.lua
 #include ui.lua
 
 function _init()
