@@ -21,6 +21,7 @@ local WORLD_STATE = {
 ---@field das table
 ---@field held_piece TetrisPiece
 ---@field can_hold boolean
+---@field is_tspin boolean
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -63,11 +64,43 @@ function World:new()
         drop = 0,
         hard = 0
     }
+    w.is_tspin = false
 
     w:refill_queue()
     w:refill_queue()
     w:create_new_active_piece()
+
+    w:setup_tspin_test()
+
     return w
+end
+
+function World:setup_tspin_test()
+    for i = 1, 22 do
+        for j = 1, 10 do
+            self.grid[i][j] = self.grid_spr
+        end
+    end
+
+    -- fills three bottom rows
+    for i = 20, 22 do
+        for j = 1, 10 do
+            self.grid[i][j] = 5
+        end
+    end
+
+    self.grid[22][3] = self.grid_spr
+    self.grid[21][3] = self.grid_spr
+    self.grid[20][3] = self.grid_spr
+    self.grid[21][2] = self.grid_spr
+    self.grid[20][2] = self.grid_spr
+
+    self.grid[21][4] = self.grid_spr
+
+
+    -- Force next piece to be T
+    self.piece_queue = { "T", "I", "O", "S", "Z", "J", "L" }
+    self:create_new_active_piece()
 end
 
 ---Main gameplay loop for the world.
@@ -265,8 +298,13 @@ function World:check_line_completion()
         end
     end
     if lines_completed > 0 then
-        self:update_score("lines", lines_completed)
+        local score_type = self.is_tspin and "tspin" or "lines"
+        self:update_score(score_type, lines_completed)
+    elseif self.is_tspin then
+        -- mini tspin
+        self:update_score("tspin", 0)
     end
+    self.is_tspin = false
 end
 
 ---Updates the player's score.
@@ -279,6 +317,12 @@ function World:update_score(score_type, amount)
         self.level = flr(self.lines_cleared / 10) + 1
         self.drop_interval = max(5, 30 - (self.level - 1))
         self.score = self.score + points[amount] * self.level
+    elseif score_type == "tspin" then
+        local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
+        self.lines_cleared = self.lines_cleared + amount
+        self.level = flr(self.lines_cleared / 10) + 1
+        self.drop_interval = max(5, 30 - (self.level - 1))
+        self.score = self.score + (points[amount] or 0) * self.level
     elseif score_type == "soft_drop" then
         self.score = self.score + amount
     elseif score_type == "hard_drop" then
@@ -317,6 +361,33 @@ function World:lock_active_piece()
         local block_row = self.active_piece.row + block[1]
         local block_column = self.active_piece.column + block[2]
         self.grid[block_row][block_column] = self.active_piece.spr
+    end
+    self:check_tspin()
+end
+
+function World:check_tspin()
+    self.is_tspin = false
+    if self.active_piece.spr == 3 then -- T-piece only
+        local pivot_row = self.active_piece.row + 1
+        local pivot_col = self.active_piece.column + 1
+
+        local corners = 0
+        local corner_offsets = {
+            { -1, -1 }, { -1, 1 },
+            { 1,  -1 }, { 1, 1 }
+        }
+
+        for _, off in pairs(corner_offsets) do
+            local c_row = pivot_row + off[1]
+            local c_col = pivot_col + off[2]
+            if not self:is_position_valid(c_row, c_col) or self.grid[c_row][c_col] ~= self.grid_spr then
+                corners += 1
+            end
+        end
+
+        if corners >= 3 then
+            self.is_tspin = true
+        end
     end
 end
 
@@ -364,6 +435,7 @@ function World:draw_world()
         self:draw_ghost_piece()
         self:draw_active_piece()
     end
+    print("score " .. tostring(self.score), 2, 50)
 end
 
 function World:draw_held_piece()
