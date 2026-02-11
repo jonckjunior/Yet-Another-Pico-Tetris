@@ -22,6 +22,7 @@ local WORLD_STATE = {
 ---@field held_piece TetrisPiece
 ---@field can_hold boolean
 ---@field is_tspin boolean
+---@field is_mini_tspin boolean
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -65,12 +66,14 @@ function World:new()
         hard = 0
     }
     w.is_tspin = false
+    w.is_mini_tspin = false
 
     w:refill_queue()
     w:refill_queue()
     w:create_new_active_piece()
 
-    w:setup_tspin_test()
+    -- TODO: FINISH THE MINI TSPIN SETUP
+    w:setup_mini_tspin_test()
 
     return w
 end
@@ -97,6 +100,27 @@ function World:setup_tspin_test()
 
     self.grid[21][4] = self.grid_spr
 
+
+    -- Force next piece to be T
+    self.piece_queue = { "T", "I", "O", "S", "Z", "J", "L" }
+    self:create_new_active_piece()
+end
+
+function World:setup_mini_tspin_test()
+    for i = 1, 22 do
+        for j = 1, 10 do
+            self.grid[i][j] = self.grid_spr
+        end
+    end
+
+    -- fills bottom row
+    for j = 1, 10 do
+        self.grid[22][j] = 5
+    end
+
+    self.grid[21][1] = 5
+    self.grid[20][1] = 5
+    self.grid[22][2] = self.grid_spr
 
     -- Force next piece to be T
     self.piece_queue = { "T", "I", "O", "S", "Z", "J", "L" }
@@ -298,13 +322,20 @@ function World:check_line_completion()
         end
     end
     if lines_completed > 0 then
-        local score_type = self.is_tspin and "tspin" or "lines"
+        local score_type = "lines"
+        if self.is_tspin then
+            score_type = "tspin"
+        elseif self.is_mini_tspin then
+            score_type = "mini_tspin"
+        end
         self:update_score(score_type, lines_completed)
-    elseif self.is_tspin then
-        -- mini tspin
-        self:update_score("tspin", 0)
+    elseif self.is_tspin or self.is_mini_tspin then
+        -- T-spin with no lines cleared
+        local score_type = self.is_mini_tspin and "mini_tspin" or "tspin"
+        self:update_score(score_type, 0)
     end
     self.is_tspin = false
+    self.is_mini_tspin = false
 end
 
 ---Updates the player's score.
@@ -319,6 +350,12 @@ function World:update_score(score_type, amount)
         self.score = self.score + points[amount] * self.level
     elseif score_type == "tspin" then
         local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
+        self.lines_cleared = self.lines_cleared + amount
+        self.level = flr(self.lines_cleared / 10) + 1
+        self.drop_interval = max(5, 30 - (self.level - 1))
+        self.score = self.score + (points[amount] or 0) * self.level
+    elseif score_type == "mini_tspin" then
+        local points = { [0] = 100, [1] = 200, [2] = 400 }
         self.lines_cleared = self.lines_cleared + amount
         self.level = flr(self.lines_cleared / 10) + 1
         self.drop_interval = max(5, 30 - (self.level - 1))
@@ -367,26 +404,76 @@ end
 
 function World:check_tspin()
     self.is_tspin = false
+    self.is_mini_tspin = false
+
     if self.active_piece.spr == 3 then -- T-piece only
         local pivot_row = self.active_piece.row + 1
         local pivot_col = self.active_piece.column + 1
 
-        local corners = 0
-        local corner_offsets = {
-            { -1, -1 }, { -1, 1 },
-            { 1,  -1 }, { 1, 1 }
+        -- Define corners based on rotation (A,B = front; C,D = back)
+        local corners_map = {
+            -- North (rotation 1): pointing up
+            [1] = {
+                A = { -1, -1 },
+                B = { -1, 1 }, -- Top corners = front
+                C = { 1, -1 },
+                D = { 1, 1 }   -- Bottom corners = back
+            },
+            -- East (rotation 2): pointing right
+            [2] = {
+                A = { -1, 1 },
+                B = { 1, 1 }, -- Right corners = front
+                C = { -1, -1 },
+                D = { 1, -1 } -- Left corners = back
+            },
+            -- South (rotation 3): pointing down
+            [3] = {
+                A = { 1, -1 },
+                B = { 1, 1 }, -- Bottom corners = front
+                C = { -1, -1 },
+                D = { -1, 1 } -- Top corners = back
+            },
+            -- West (rotation 4): pointing left
+            [4] = {
+                A = { -1, -1 },
+                B = { 1, -1 }, -- Left corners = front
+                C = { -1, 1 },
+                D = { 1, 1 }   -- Right corners = back
+            }
         }
 
-        for _, off in pairs(corner_offsets) do
-            local c_row = pivot_row + off[1]
-            local c_col = pivot_col + off[2]
-            if not self:is_position_valid(c_row, c_col) or self.grid[c_row][c_col] ~= self.grid_spr then
-                corners += 1
+        local corners = corners_map[self.active_piece.rotation]
+
+        -- Check which corners are filled
+        local filled = { A = false, B = false, C = false, D = false }
+        for name, offset in pairs(corners) do
+            local c_row = pivot_row + offset[1]
+            local c_col = pivot_col + offset[2]
+            if not self:is_position_valid(c_row, c_col) or
+                self.grid[c_row][c_col] ~= self.grid_spr then
+                filled[name] = true
             end
         end
 
-        if corners >= 3 then
-            self.is_tspin = true
+        -- Count total filled corners
+        local total_filled = 0
+        for _, is_filled in pairs(filled) do
+            if is_filled then total_filled += 1 end
+        end
+
+        debug(total_filled)
+
+        -- T-Spin detection (need at least 3 corners filled)
+        if total_filled >= 3 then
+            -- Full T-Spin: A and B (front) + at least one of C or D (back)
+            if filled.A and filled.B and (filled.C or filled.D) then
+                self.is_tspin = true
+                debug("tspinzera")
+                -- Mini T-Spin: C and D (back) + at least one of A or B (front)
+            elseif filled.C and filled.D and (filled.A or filled.B) then
+                self.is_mini_tspin = true
+                debug("minitspinzera")
+            end
         end
     end
 end
