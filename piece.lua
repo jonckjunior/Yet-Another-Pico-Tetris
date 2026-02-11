@@ -176,6 +176,48 @@ PIECE_SPR = {
     L = 7  -- orange
 }
 
+
+-- SRS Wall Kick Data for JLSTZ pieces
+SRS_KICKS_JLSTZ = {
+    [1] = {                                                              -- From rotation state 1 (spawn/0°)
+        [2] = { { 0, 0 }, { 0, -1 }, { 1, -1 }, { -2, 0 }, { -2, -1 } }, -- to state 2 (CW)
+        [4] = { { 0, 0 }, { 0, 1 }, { 1, 1 }, { -2, 0 }, { -2, 1 } }     -- to state 4 (CCW)
+    },
+    [2] = {                                                              -- From rotation state 2 (90° CW)
+        [1] = { { 0, 0 }, { 0, 1 }, { -1, 1 }, { 2, 0 }, { 2, 1 } },     -- to state 1 (CCW)
+        [3] = { { 0, 0 }, { 0, 1 }, { -1, 1 }, { 2, 0 }, { 2, 1 } }      -- to state 3 (CW)
+    },
+    [3] = {                                                              -- From rotation state 3 (180°)
+        [2] = { { 0, 0 }, { 0, -1 }, { 1, -1 }, { -2, 0 }, { -2, -1 } }, -- to state 2 (CCW)
+        [4] = { { 0, 0 }, { 0, 1 }, { 1, 1 }, { -2, 0 }, { -2, 1 } }     -- to state 4 (CW)
+    },
+    [4] = {                                                              -- From rotation state 4 (270° CW / 90° CCW)
+        [3] = { { 0, 0 }, { 0, -1 }, { -1, -1 }, { 2, 0 }, { 2, -1 } },  -- to state 3 (CCW)
+        [1] = { { 0, 0 }, { 0, -1 }, { -1, -1 }, { 2, 0 }, { 2, -1 } }   -- to state 1 (CW)
+    }
+}
+
+-- SRS Wall Kick Data for I piece
+SRS_KICKS_I = {
+    [1] = {                                                            -- From rotation state 1 (spawn/0°)
+        [2] = { { 0, 0 }, { 0, -2 }, { 0, 1 }, { 1, -2 }, { -2, 1 } }, -- to state 2 (CW)
+        [4] = { { 0, 0 }, { 0, -1 }, { 0, 2 }, { -2, -1 }, { 1, 2 } }  -- to state 4 (CCW)
+    },
+    [2] = {                                                            -- From rotation state 2 (90° CW)
+        [1] = { { 0, 0 }, { 0, 2 }, { 0, -1 }, { -1, 2 }, { 2, -1 } }, -- to state 1 (CCW)
+        [3] = { { 0, 0 }, { 0, -1 }, { 0, 2 }, { -2, -1 }, { 1, 2 } }  -- to state 3 (CW)
+    },
+    [3] = {                                                            -- From rotation state 3 (180°)
+        [2] = { { 0, 0 }, { 0, 1 }, { 0, -2 }, { 2, 1 }, { -1, -2 } }, -- to state 2 (CCW)
+        [4] = { { 0, 0 }, { 0, 2 }, { 0, -1 }, { -1, 2 }, { 2, -1 } }  -- to state 4 (CW)
+    },
+    [4] = {                                                            -- From rotation state 4 (270° CW / 90° CCW)
+        [3] = { { 0, 0 }, { 0, -2 }, { 0, 1 }, { 1, -2 }, { -2, 1 } }, -- to state 3 (CCW)
+        [1] = { { 0, 0 }, { 0, 1 }, { 0, -2 }, { 2, 1 }, { -1, -2 } }  -- to state 1 (CW)
+    }
+}
+
+
 ---Takes the parameters below to create a TetrisPiece
 ---@param shapeId string
 ---@param rotation integer

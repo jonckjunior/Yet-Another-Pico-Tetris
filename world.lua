@@ -73,8 +73,7 @@ function World:new()
     w:refill_queue()
     w:create_new_active_piece()
 
-    -- TODO: FINISH THE MINI TSPIN SETUP
-    w:setup_mini_tspin_test()
+    w:setup_i_srs_test()
 
     return w
 end
@@ -191,31 +190,50 @@ function World:perform_hold()
     self.timer.drop = 0
 end
 
----Handles rotation input. If the piece can't rotate because of a collision, it will try wall kicks. If it still can't rotate, it will revert the rotation.
+---Handles rotation input using SRS kick tables
 ---@param rot integer
 function World:handle_rotation(rot)
     local old_rotation = self.active_piece.rotation
     local old_shape = self.active_piece.shape
+    local old_row = self.active_piece.row
+    local old_col = self.active_piece.column
+
     self.active_piece:rotate(rot)
+    local new_rotation = self.active_piece.rotation
 
-    if not self:can_move(0, 0) then
-        local wall_kicks = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 0, 2 }, { 0, -2 }, { -1, -1 }, { -1, 1 } }
-        local kicked = false
+    -- O-piece doesn't need kicks
+    if self.active_piece.shapeId == "O" then
+        return
+    end
 
-        for _, kick in pairs(wall_kicks) do
-            if self:can_move(kick[1], kick[2]) then
-                self.active_piece.row = self.active_piece.row + kick[1]
-                self.active_piece.column = self.active_piece.column + kick[2]
-                kicked = true
-                break
-            end
+    -- Select appropriate kick table
+    local kick_table
+    if self.active_piece.shapeId == "I" then
+        kick_table = SRS_KICKS_I
+    else
+        kick_table = SRS_KICKS_JLSTZ
+    end
+
+    -- Get kicks for this rotation transition
+    local kicks = kick_table[old_rotation][new_rotation]
+
+    -- Try each kick in order
+    local kicked = false
+    for _, kick in ipairs(kicks) do
+        if self:can_move(kick[1], kick[2]) then
+            self.active_piece.row = self.active_piece.row + kick[1]
+            self.active_piece.column = self.active_piece.column + kick[2]
+            kicked = true
+            break
         end
+    end
 
-        if not kicked then
-            -- revert rotation
-            self.active_piece.rotation = old_rotation
-            self.active_piece.shape = old_shape
-        end
+    if not kicked then
+        -- Revert rotation if no kick worked
+        self.active_piece.rotation = old_rotation
+        self.active_piece.shape = old_shape
+        self.active_piece.row = old_row
+        self.active_piece.column = old_col
     end
 end
 
