@@ -25,6 +25,9 @@ local WORLD_STATE = {
 ---@field is_mini_tspin boolean
 ---@field last_action string
 ---@field last_rotation_kick integer
+---@field spawn_row integer
+---@field spawn_column integer
+---@field spawn_rotation integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -71,6 +74,9 @@ function World:new()
     w.is_mini_tspin = false
     w.last_action = nil
     w.last_rotation_kick = nil
+    w.spawn_row = 1
+    w.spawn_column = 5
+    w.spawn_rotation = 1
 
     w:refill_queue()
     w:refill_queue()
@@ -162,7 +168,7 @@ function World:handle_input_playing()
 
     -- if the players is holding up and x, we hold
     if btn(2) and btn(5) and self.can_hold then
-        self:perform_hold()
+        self:handle_hold()
     elseif btnp(5) then
         -- Counterclockwise rotation
         self:handle_rotation(-2)
@@ -171,7 +177,7 @@ function World:handle_input_playing()
 end
 
 ---Swap between the piece held and the active piece. If no piece held, then just insert active piece in held position.
-function World:perform_hold()
+function World:handle_hold()
     if not DEBUG then
         self.can_hold = false
     end
@@ -190,9 +196,9 @@ function World:perform_hold()
     self.held_piece.rotation = 1
 
     -- reset position and rotation of the active piece
-    self.active_piece.row = 1
-    self.active_piece.column = 5
-    self.active_piece.rotation = 1
+    self.active_piece.row = self.spawn_row
+    self.active_piece.column = self.spawn_column
+    self.active_piece.rotation = self.spawn_rotation
 
     -- reset drop timer so it doesn't drop immediately
     self.timer.drop = 0
@@ -366,7 +372,7 @@ end
 ---Assigns a new active piece to the world. If the bag is empty, it replenishes the bag.
 function World:create_new_active_piece()
     local piece_type = deli(self.piece_queue, 1)
-    self.active_piece = TetrisPiece:new(piece_type, 1, 1, 5)
+    self.active_piece = TetrisPiece:new(piece_type, self.spawn_rotation, self.spawn_row, self.spawn_column)
 
     -- Ensure enough for 6 previews
     if #self.piece_queue < 6 then
