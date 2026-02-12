@@ -82,3 +82,34 @@ function World:setup_i_srs_test()
     self.piece_queue = { "I", "I", "I", "I", "I", "I", "I" }
     self:create_new_active_piece()
 end
+
+function World:setup_tspin_special_case_test()
+    for i = 1, 22 do
+        for j = 1, 10 do
+            self.grid[i][j] = self.grid_spr
+        end
+    end
+
+    -- fills three bottom rows
+    for i = 20, 22 do
+        for j = 1, 10 do
+            self.grid[i][j] = 5
+        end
+    end
+
+    self.grid[22 - 4][1] = 5
+    self.grid[22 - 3][1] = 5
+    self.grid[22 - 4][2] = 5
+
+    self.grid[22 - 2][2] = self.grid_spr
+    self.grid[22 - 1][2] = self.grid_spr
+    self.grid[22][2] = self.grid_spr
+
+    self.grid[22 - 1][3] = self.grid_spr
+    self.grid[22][3] = self.grid_spr
+
+
+    -- Force next piece to be T
+    self.piece_queue = { "T", "I", "O", "S", "Z", "J", "L" }
+    self:create_new_active_piece()
+end

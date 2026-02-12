@@ -76,7 +76,7 @@ function World:new()
     w:refill_queue()
     w:create_new_active_piece()
 
-    w:setup_i_srs_test()
+    w:setup_tspin_special_case_test()
 
     return w
 end
