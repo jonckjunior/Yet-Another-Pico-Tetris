@@ -81,6 +81,13 @@ function World:new()
     return w
 end
 
+function World:reset_action_state()
+    self.last_action = nil
+    self.last_rotation_kick = nil
+    self.is_tspin = false
+    self.is_mini_tspin = false
+end
+
 ---Main gameplay loop for the world.
 function World:update_world()
     self.timer.drop = self.timer.drop + 1
@@ -367,6 +374,8 @@ function World:create_new_active_piece()
     if #self.piece_queue < 6 then
         self:refill_queue()
     end
+
+    self:reset_action_state()
 end
 
 ---Places the active piece in the grid.
