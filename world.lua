@@ -24,6 +24,7 @@ local WORLD_STATE = {
 ---@field is_tspin boolean
 ---@field is_mini_tspin boolean
 ---@field last_action string
+---@field last_rotation_kick integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -68,6 +69,8 @@ function World:new()
     }
     w.is_tspin = false
     w.is_mini_tspin = false
+    w.last_action = nil
+    w.last_rotation_kick = nil
 
     w:refill_queue()
     w:refill_queue()
@@ -219,10 +222,11 @@ function World:handle_rotation(rot)
 
     -- Try each kick in order
     local kicked = false
-    for _, kick in ipairs(kicks) do
+    for idx, kick in ipairs(kicks) do
         if self:can_move(kick[1], kick[2]) then
             self.active_piece.row = self.active_piece.row + kick[1]
             self.active_piece.column = self.active_piece.column + kick[2]
+            self.last_rotation_kick = idx
             kicked = true
             break
         end
@@ -309,8 +313,6 @@ function World:check_line_completion()
         local score_type = self.is_mini_tspin and "mini_tspin" or "tspin"
         self:update_score(score_type, 0)
     end
-    self.is_tspin = false
-    self.is_mini_tspin = false
 end
 
 ---Updates the player's score.
@@ -438,16 +440,17 @@ function World:check_tspin()
 
         debug(total_filled)
 
-        -- T-Spin detection (need at least 3 corners filled)
+        -- T-Spin detection (need at least 3 corners filled or special case)
         if total_filled >= 3 then
-            -- Full T-Spin: A and B (front) + at least one of C or D (back)
-            if filled.A and filled.B and (filled.C or filled.D) then
+            -- Special case: Kick #5 (TST/Fin kick) always counts as full T-spin
+            if self.last_rotation_kick == 5 then
                 self.is_tspin = true
-                debug("tspinzera")
+                -- Full T-Spin: A and B (front) + at least one of C or D (back)
+            elseif filled.A and filled.B and (filled.C or filled.D) then
+                self.is_tspin = true
                 -- Mini T-Spin: C and D (back) + at least one of A or B (front)
             elseif filled.C and filled.D and (filled.A or filled.B) then
                 self.is_mini_tspin = true
-                debug("minitspinzera")
             end
         end
     end
