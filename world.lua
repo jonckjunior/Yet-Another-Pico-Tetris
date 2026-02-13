@@ -285,14 +285,30 @@ function World:try_move_piece_down()
         self.active_piece.row = self.active_piece.row + 1
     else
         self:lock_active_piece()
-        -- reset hold
-        self.can_hold = true
-        if self:check_line_completion() then
+
+        local completed_rows, score_type = self:check_line_completion()
+        if #completed_rows > 0 then
+            assert(score_type)
+            self:start_line_completion_animation(completed_rows, score_type)
             self.state = WORLD_STATE.LINE_CLEAR
         else
+            -- update score if there's a score type
+            if score_type then
+                self:update_score(score_type, 0)
+            end
             self:spawn_next_piece()
         end
     end
+end
+
+---Starts the line completion animation with lines_completed lines.
+---@param completed_rows table
+---@param score_type string
+function World:start_line_completion_animation(completed_rows, score_type)
+    self.animation.type = score_type
+    self.animation.timer = 0
+    self.animation.lines = completed_rows
+    self.animation.lines_count = #completed_rows
 end
 
 function World:spawn_next_piece()
@@ -345,8 +361,8 @@ function World:clear_completed_lines()
     self.animation.lines = {}
 end
 
----Checks for completed lines.
----@return boolean
+---Returns a table with the lines that are currently completed and need to be cleared and the score type if any.
+---@return table, string|nil
 function World:check_line_completion()
     local lines_completed = 0
     local completed_rows = {}
@@ -367,26 +383,17 @@ function World:check_line_completion()
         end
     end
 
+    -- Determine score type based on lines cleared + tspin status
+    local score_type = nil
     if lines_completed > 0 then
-        -- Determine score type
-        local score_type = "lines"
-        if self.is_tspin then
-            score_type = "tspin"
-        elseif self.is_mini_tspin then
-            score_type = "mini_tspin"
-        end
-
-        self.animation.type = score_type
-        self.animation.timer = 0
-        self.animation.lines = completed_rows
-        self.animation.lines_count = lines_completed
-    elseif self.is_tspin or self.is_mini_tspin then
-        -- T-spin with no lines - instant score
-        local score_type = self.is_mini_tspin and "mini_tspin" or "tspin"
-        self:update_score(score_type, 0)
+        score_type = self.is_tspin and "tspin" or self.is_mini_tspin and "mini_tspin" or "lines"
+    elseif self.is_tspin then
+        score_type = "tspin"
+    elseif self.is_mini_tspin then
+        score_type = "mini_tspin"
     end
 
-    return lines_completed > 0
+    return completed_rows, score_type
 end
 
 ---Updates the player's score.
@@ -453,6 +460,8 @@ function World:lock_active_piece()
         self.grid[block_row][block_column] = self.active_piece.spr
     end
     self:check_tspin()
+    -- reset hold
+    self.can_hold = true
 end
 
 function World:check_tspin()
@@ -513,8 +522,6 @@ function World:check_tspin()
         for _, is_filled in pairs(filled) do
             if is_filled then total_filled += 1 end
         end
-
-        debug(total_filled)
 
         -- T-Spin detection (need at least 3 corners filled or special case)
         if total_filled >= 3 then
