@@ -88,7 +88,7 @@ function World:new()
 
     w:refill_queue()
     w:refill_queue()
-    w:create_new_active_piece()
+    w:spawn_next_piece()
 
     return w
 end
@@ -113,6 +113,12 @@ function World:update_world()
 end
 
 function World:update_line_clear_animation()
+    self.animation.timer = self.animation.timer + 1
+
+    if self.animation.timer >= self.animation.duration then
+        self:clear_completed_lines()
+        self:spawn_next_piece()
+    end
 end
 
 function World:update_game_over()
@@ -190,10 +196,11 @@ end
 
 ---Swap between the piece held and the active piece. If no piece held, then just insert active piece in held position.
 function World:handle_hold()
+    self.can_hold = false
     if self.held_piece == nil then
         -- just store the active piece in the held position
         self.held_piece = self.active_piece
-        self:create_new_active_piece()
+        self:spawn_next_piece()
     else
         -- swap held and active pieces
         local temp = self.active_piece
@@ -277,15 +284,18 @@ function World:try_move_piece_down()
         self:lock_active_piece()
         self:check_line_completion()
         self:clear_completed_lines()
-        self:create_new_active_piece()
-
-        -- reset hold to the player
+        self:spawn_next_piece()
+        -- reset hold
         self.can_hold = true
+    end
+end
 
-        if not self:can_move(0, 0) then
-            self.state = WORLD_STATE.GAME_OVER
-            return
-        end
+function World:spawn_next_piece()
+    self:create_new_active_piece()
+
+    -- Check if new piece can fit (game over condition)
+    if not self:can_move(0, 0) then
+        self.state = WORLD_STATE.GAME_OVER
     end
 end
 
