@@ -1,7 +1,8 @@
 ---@enum WorldState
 local WORLD_STATE = {
     PLAYING = "playing",
-    GAME_OVER = "game_over"
+    GAME_OVER = "game_over",
+    LINE_CLEAR = "line_clear"
 }
 
 ---@class World
@@ -28,6 +29,7 @@ local WORLD_STATE = {
 ---@field spawn_row integer
 ---@field spawn_column integer
 ---@field spawn_rotation integer
+---@field animation table
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -77,6 +79,12 @@ function World:new()
     w.spawn_row = 1
     w.spawn_column = 5
     w.spawn_rotation = 1
+    w.animation = {
+        type = nil,   -- "line_clear", "tspin"
+        timer = 0,    -- Animation frame counter
+        lines = {},   -- Array of line numbers being cleared
+        duration = 20 -- Animation length in frames
+    }
 
     w:refill_queue()
     w:refill_queue()
@@ -94,13 +102,17 @@ end
 
 ---Main gameplay loop for the world.
 function World:update_world()
-    self.timer.drop = self.timer.drop + 1
     if self.state == WORLD_STATE.PLAYING then
         self:handle_input_playing()
         self:handle_auto_drop()
+    elseif self.state == WORLD_STATE.LINE_CLEAR then
+        self:update_line_clear_animation()
     else
         self:update_game_over()
     end
+end
+
+function World:update_line_clear_animation()
 end
 
 function World:update_game_over()
@@ -178,10 +190,6 @@ end
 
 ---Swap between the piece held and the active piece. If no piece held, then just insert active piece in held position.
 function World:handle_hold()
-    if not DEBUG then
-        self.can_hold = false
-    end
-
     if self.held_piece == nil then
         -- just store the active piece in the held position
         self.held_piece = self.active_piece
@@ -254,6 +262,7 @@ end
 
 ---Every so often the game will force the active piece down. This is the function that handles that.
 function World:handle_auto_drop()
+    self.timer.drop = self.timer.drop + 1
     if self.timer.drop == self.drop_interval then
         self:try_move_piece_down()
     end
@@ -267,6 +276,7 @@ function World:try_move_piece_down()
     else
         self:lock_active_piece()
         self:check_line_completion()
+        self:clear_completed_lines()
         self:create_new_active_piece()
 
         -- reset hold to the player
@@ -279,24 +289,23 @@ function World:try_move_piece_down()
     end
 end
 
----Checks for completed lines.
-function World:check_line_completion()
-    local lines_completed = 0
+function World:clear_completed_lines()
     local rows = #self.grid
     local columns = #self.grid[1]
     local write_row = rows
+
+    -- Use the stored line numbers from animation
     for read_row = rows, 1, -1 do
-        local full = true
-        for column = 1, columns do
-            if self.grid[read_row][column] == self.grid_spr then
-                full = false
+        local is_cleared = false
+        for _, cleared_row in ipairs(self.animation.lines) do
+            if read_row == cleared_row then
+                is_cleared = true
                 break
             end
         end
-        if full then
-            lines_completed = lines_completed + 1
-        else
-            -- Copy non-full row to bottom
+
+        if not is_cleared then
+            -- Copy non-cleared row to bottom
             if write_row ~= read_row then
                 for column = 1, columns do
                     self.grid[write_row][column] = self.grid[read_row][column]
@@ -305,22 +314,58 @@ function World:check_line_completion()
             write_row = write_row - 1
         end
     end
+
     -- Clear top rows (now empty space)
-    for row = 1, lines_completed do
+    for row = 1, #self.animation.lines do
         for column = 1, columns do
             self.grid[row][column] = self.grid_spr
         end
     end
+
+    -- Score the cleared lines
+    self:update_score(self.animation.type, self.animation.lines_count)
+
+    -- Reset animation
+    self.animation.type = nil
+    self.animation.lines = {}
+end
+
+---Checks for completed lines.
+function World:check_line_completion()
+    local lines_completed = 0
+    local completed_rows = {}
+    local rows = #self.grid
+    local columns = #self.grid[1]
+
+    for row = rows, 1, -1 do
+        local full = true
+        for column = 1, columns do
+            if self.grid[row][column] == self.grid_spr then
+                full = false
+                break
+            end
+        end
+        if full then
+            lines_completed = lines_completed + 1
+            add(completed_rows, row)
+        end
+    end
+
     if lines_completed > 0 then
+        -- Determine score type
         local score_type = "lines"
         if self.is_tspin then
             score_type = "tspin"
         elseif self.is_mini_tspin then
             score_type = "mini_tspin"
         end
-        self:update_score(score_type, lines_completed)
+
+        self.animation.type = score_type
+        self.animation.timer = 0
+        self.animation.lines = completed_rows
+        self.animation.lines_count = lines_completed
     elseif self.is_tspin or self.is_mini_tspin then
-        -- T-spin with no lines cleared
+        -- T-spin with no lines - instant score
         local score_type = self.is_mini_tspin and "mini_tspin" or "tspin"
         self:update_score(score_type, 0)
     end
