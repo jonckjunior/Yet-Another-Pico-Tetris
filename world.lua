@@ -90,6 +90,8 @@ function World:new()
     w:refill_queue()
     w:spawn_next_piece()
 
+    w:setup_tspin_test()
+
     return w
 end
 
@@ -118,6 +120,7 @@ function World:update_line_clear_animation()
     if self.animation.timer >= self.animation.duration then
         self:clear_completed_lines()
         self:spawn_next_piece()
+        self.state = WORLD_STATE.PLAYING
     end
 end
 
@@ -282,11 +285,13 @@ function World:try_move_piece_down()
         self.active_piece.row = self.active_piece.row + 1
     else
         self:lock_active_piece()
-        self:check_line_completion()
-        self:clear_completed_lines()
-        self:spawn_next_piece()
         -- reset hold
         self.can_hold = true
+        if self:check_line_completion() then
+            self.state = WORLD_STATE.LINE_CLEAR
+        else
+            self:spawn_next_piece()
+        end
     end
 end
 
@@ -341,6 +346,7 @@ function World:clear_completed_lines()
 end
 
 ---Checks for completed lines.
+---@return boolean
 function World:check_line_completion()
     local lines_completed = 0
     local completed_rows = {}
@@ -379,6 +385,8 @@ function World:check_line_completion()
         local score_type = self.is_mini_tspin and "mini_tspin" or "tspin"
         self:update_score(score_type, 0)
     end
+
+    return lines_completed > 0
 end
 
 ---Updates the player's score.
@@ -560,6 +568,10 @@ function World:draw_world()
     self:draw_grid()
     self:draw_next_piece()
     self:draw_held_piece()
+
+    if self.state == WORLD_STATE.LINE_CLEAR then
+        print("good job", 50, 50, 7)
+    end
 
     -- let's just print a game over message for now
     if self.state == WORLD_STATE.GAME_OVER then
