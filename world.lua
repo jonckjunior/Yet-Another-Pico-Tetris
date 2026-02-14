@@ -90,7 +90,7 @@ function World:new()
     w:refill_queue()
     w:spawn_next_piece()
 
-    w:setup_tspin_test()
+    w:setup_i_srs_test()
 
     return w
 end
