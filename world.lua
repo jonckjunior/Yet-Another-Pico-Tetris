@@ -30,6 +30,7 @@ local WORLD_STATE = {
 ---@field spawn_column integer
 ---@field spawn_rotation integer
 ---@field animation table
+---@field shake integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -85,12 +86,13 @@ function World:new()
         lines = {},   -- Array of line numbers being cleared
         duration = 10 -- Animation length in frames
     }
+    w.shake = 0
 
     w:refill_queue()
     w:refill_queue()
     w:spawn_next_piece()
 
-    w:setup_tspin_test()
+    -- w:setup_tspin_test()
 
     return w
 end
@@ -309,6 +311,7 @@ function World:start_line_completion_animation(completed_rows, score_type)
     self.animation.timer = 0
     self.animation.lines = completed_rows
     self.animation.lines_count = #completed_rows
+    self.shake = 1 + #completed_rows
 end
 
 function World:spawn_next_piece()
@@ -572,6 +575,16 @@ end
 
 ---Draw everything in the world
 function World:draw_world()
+    if self.shake > 0 then
+        local dx = rnd(self.shake) - self.shake / 2
+        local dy = rnd(self.shake) - self.shake / 2
+        camera(dx, dy)
+        -- Decay the shake value
+        self.shake = self.shake * 0.3
+        if self.shake < 0.1 then self.shake = 0 end
+    else
+        camera(0, 0)
+    end
     self:draw_grid()
     self:draw_next_piece()
     self:draw_held_piece()
@@ -588,9 +601,13 @@ function World:draw_world()
         print("\f7\^o0ffgame over", 20, 60)
     end
     print("score " .. tostring(self.score), 2, 50)
+    camera(0, 0)
 end
 
 function World:draw_line_clear_animation()
+    if self.animation.timer < 5 then
+        return
+    end
     local progress = self.animation.timer / self.animation.duration
     local shrink_factor = 1 - progress
     local height = self.block_size * shrink_factor
