@@ -83,14 +83,14 @@ function World:new()
         type = nil,   -- "line_clear", "tspin"
         timer = 0,    -- Animation frame counter
         lines = {},   -- Array of line numbers being cleared
-        duration = 20 -- Animation length in frames
+        duration = 10 -- Animation length in frames
     }
 
     w:refill_queue()
     w:refill_queue()
     w:spawn_next_piece()
 
-    w:setup_i_srs_test()
+    w:setup_tspin_test()
 
     return w
 end
@@ -575,19 +575,46 @@ function World:draw_world()
     self:draw_grid()
     self:draw_next_piece()
     self:draw_held_piece()
+    self:draw_ghost_piece()
+    self:draw_active_piece()
 
     if self.state == WORLD_STATE.LINE_CLEAR then
-        print("good job", 50, 50, 7)
+        self:draw_line_clear_animation()
+        -- print("good job", 50, 50, 7)
     end
 
     -- let's just print a game over message for now
     if self.state == WORLD_STATE.GAME_OVER then
         print("\f7\^o0ffgame over", 20, 60)
-    else
-        self:draw_ghost_piece()
-        self:draw_active_piece()
     end
     print("score " .. tostring(self.score), 2, 50)
+end
+
+function World:draw_line_clear_animation()
+    local progress = self.animation.timer / self.animation.duration
+    local shrink_factor = 1 - progress
+    local height = self.block_size * shrink_factor
+    local width = #self.grid[1] * self.block_size
+
+    -- Disable transparency for color 0
+    palt(0, false)
+
+    for row in all(self.animation.lines) do
+        -- clean-up the blocks that are already there for the animation
+        for column = 1, #self.grid[row] do
+            self:draw_block(row, column, self.grid_spr)
+        end
+
+        local x = self.board_x
+        -- Center the shrinking rectangle in the middle of the original row space
+        local y = self.board_y + (row - 1) * self.block_size + (self.block_size - height) / 2
+
+        -- Draw the white shrinking effect
+        rectfill(x, y, x + width - 1, y + height - 1, 7)
+    end
+
+    -- Re-enable transparency for color 0 so other sprites work
+    palt(0, true)
 end
 
 function World:draw_held_piece()
@@ -633,7 +660,7 @@ function World:draw_grid()
     --We skip the first two rows
     for row = 3, #self.grid do
         for column = 1, #self.grid[row] do
-            self:draw_block(row, column, self.grid[row][column] or 8)
+            self:draw_block(row, column, self.grid[row][column] or self.grid_spr)
         end
     end
 end
