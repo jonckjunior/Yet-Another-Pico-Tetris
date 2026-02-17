@@ -332,6 +332,7 @@ function World:prepare_line_completion_animation(completed_rows, score_type)
 end
 
 function World:finish_turn()
+    self.active_piece = nil
     if self.challenge.is_victory(self) then
         -- set it to victory and do not create another piece
         self.state = WORLD_STATE.VICTORY
@@ -757,8 +758,8 @@ end
 
 ---Draws the active piece on the screen
 function World:draw_active_piece()
-    -- we don't draw the active piece if the game is over
-    if self.state == WORLD_STATE.GAME_OVER then
+    -- we don't draw the active piece if there's no piece to be drawn
+    if not self.active_piece then
         return
     end
     for _, block in pairs(self.active_piece.shape) do
@@ -770,6 +771,9 @@ end
 
 ---Draws the ghost piece on the screen
 function World:draw_ghost_piece()
+    if not self.active_piece then
+        return
+    end
     local ghost_row = self.active_piece.row
     while self:can_move(ghost_row - self.active_piece.row + 1, 0) do
         ghost_row = ghost_row + 1
