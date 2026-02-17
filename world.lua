@@ -637,7 +637,7 @@ function World:draw_border()
     line(self.board_x - 1, 126, right_side_grid, 126, 7)
 
 
-    local enclosing_height = self.block_size * 2 * 6 + 6 * self.block_size + 5
+    local enclosing_height = self.block_size * 2 * 5 + 5 * self.block_size + 5
     -- enclosing right border for next piece
     line(127, 0, 127, enclosing_height - 3, 7)
 
