@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
 #include piece.lua
+#include challenge.lua
 #include world.lua
 #include setup.lua
 #include ui.lua
@@ -41,7 +42,7 @@ end
 
 function change_mode(new_mode)
     if new_mode == "playing" then
-        world = World:new()
+        world = World:new(CHALLENGES.do_a_tspin)
     end
     mode = new_mode
 end
@@ -52,7 +53,7 @@ end
 
 function print_debug()
     for d in all(debug_list) do
-        print(d)
+        print(d, 50, 50, 7)
     end
     debug_list = {}
 end

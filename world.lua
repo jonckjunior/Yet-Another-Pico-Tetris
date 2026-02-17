@@ -33,12 +33,14 @@ local WORLD_STATE = {
 ---@field animation table
 ---@field shake integer
 ---@field preview integer
+---@field challenge Challenge
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
 ---Creates a new world
+---@param challenge Challenge
 ---@return World
-function World:new()
+function World:new(challenge)
     local w = {}
 
     -- Set up metatable FIRST
@@ -92,12 +94,13 @@ function World:new()
     }
     w.shake = 0
     w.preview = 5
+    w.challenge = challenge
 
     w:refill_queue()
     w:refill_queue()
     w:finish_turn()
 
-    -- w:setup_tspin_test()
+    w:setup_tspin_test()
 
     return w
 end
@@ -328,12 +331,8 @@ function World:prepare_line_completion_animation(completed_rows, score_type)
     self.shake = 1 + #completed_rows
 end
 
-function World:check_victory_condition()
-    return self.lines_cleared >= 1
-end
-
 function World:finish_turn()
-    if self:check_victory_condition() then
+    if self.challenge.is_victory(self) then
         -- set it to victory and do not create another piece
         self.state = WORLD_STATE.VICTORY
         return
