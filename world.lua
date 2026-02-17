@@ -710,7 +710,7 @@ function World:draw_next_piece()
     local delta_row = 3
     local delta_column = 12
 
-    for i = 1, 6 do
+    for i = 1, 5 do
         local next = TetrisPiece:new(self.piece_queue[i], 1, delta_row + (i - 1) * 3, delta_column)
         for block in all(next.shape) do
             self:draw_block(next.row + block[1], next.column + block[2], next.spr)
