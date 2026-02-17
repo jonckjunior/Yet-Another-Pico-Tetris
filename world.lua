@@ -2,7 +2,8 @@
 local WORLD_STATE = {
     PLAYING = "playing",
     GAME_OVER = "game_over",
-    LINE_CLEAR = "line_clear"
+    LINE_CLEAR = "line_clear",
+    VICTORY = "victory"
 }
 
 ---@class World
@@ -113,6 +114,14 @@ function World:update_world()
         self:update_line_clear_animation()
     elseif self.state == WORLD_STATE.GAME_OVER then
         self:update_game_over()
+    elseif self.state == WORLD_STATE.VICTORY then
+        self:update_victory()
+    end
+end
+
+function World:update_victory()
+    if btnp(5) then
+        change_mode("menu")
     end
 end
 
@@ -292,7 +301,7 @@ function World:try_move_piece_down()
         local completed_rows, score_type = self:check_line_completion()
         if #completed_rows > 0 then
             assert(score_type)
-            self:start_line_completion_animation(completed_rows, score_type)
+            self:prepare_line_completion_animation(completed_rows, score_type)
             self.state = WORLD_STATE.LINE_CLEAR
         else
             -- update score if there's a score type
@@ -307,7 +316,7 @@ end
 ---Starts the line completion animation with lines_completed lines.
 ---@param completed_rows table
 ---@param score_type string
-function World:start_line_completion_animation(completed_rows, score_type)
+function World:prepare_line_completion_animation(completed_rows, score_type)
     self.animation.type = score_type
     self.animation.timer = 0
     self.animation.lines = completed_rows
@@ -596,13 +605,13 @@ function World:draw_world()
 
     if self.state == WORLD_STATE.LINE_CLEAR then
         self:draw_line_clear_animation()
-        -- print("good job", 50, 50, 7)
-    end
-
-    -- let's just print a game over message for now
-    if self.state == WORLD_STATE.GAME_OVER then
+    elseif self.state == WORLD_STATE.GAME_OVER then
         cls()
         print("\f7\^o0ffgame over", 50, 50)
+        print("press x to go back to the menu", 0, 56 + 20)
+    elseif self.state == WORLD_STATE.VICTORY then
+        cls()
+        print("\f7\^o0ffvictory", 50, 50)
         print("press x to go back to the menu", 0, 56 + 20)
     end
     -- print("score" .. tostring(self.score), 2, 50)
