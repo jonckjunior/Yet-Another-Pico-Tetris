@@ -5,11 +5,12 @@ __lua__
 #include world.lua
 #include setup.lua
 #include ui.lua
+#include menu.lua
 
 function _init()
     DEBUG = false
     frame_timer = 0
-    mode = "playing"
+    mode = "menu"
     world = World:new()
 end
 
