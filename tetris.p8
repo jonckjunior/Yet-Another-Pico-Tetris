@@ -11,17 +11,13 @@ function _init()
     DEBUG = false
     frame_timer = 0
     mode = "menu"
-    world = World:new()
+    world = nil
 end
 
 function _update()
     if mode == "playing" then
         world:update_world()
         update_ui()
-
-        if world.state == WORLD_STATE.GAME_OVER and btnp(4) then
-            world = World:new()
-        end
     elseif mode == "menu" then
         update_menu()
     end
@@ -41,6 +37,13 @@ function _draw()
 
     -- if transition.active then transition:draw() end
     print_debug()
+end
+
+function change_mode(new_mode)
+    if new_mode == "playing" then
+        world = World:new()
+    end
+    mode = new_mode
 end
 
 function debug(str)

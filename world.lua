@@ -111,7 +111,7 @@ function World:update_world()
         self:handle_auto_drop()
     elseif self.state == WORLD_STATE.LINE_CLEAR then
         self:update_line_clear_animation()
-    else
+    elseif self.state == WORLD_STATE.GAME_OVER then
         self:update_game_over()
     end
 end
@@ -127,8 +127,9 @@ function World:update_line_clear_animation()
 end
 
 function World:update_game_over()
-    -- TODO: add game over screen
-    if btnp(4) then World:new() end
+    if btnp(5) then
+        change_mode("menu")
+    end
 end
 
 ---Source of truth for player input during gameplay. For player input during other game states, see other functions.
@@ -600,7 +601,9 @@ function World:draw_world()
 
     -- let's just print a game over message for now
     if self.state == WORLD_STATE.GAME_OVER then
-        print("\f7\^o0ffgame over", 20, 60)
+        cls()
+        print("\f7\^o0ffgame over", 50, 50)
+        print("press x to go back to the menu", 0, 56 + 20)
     end
     -- print("score" .. tostring(self.score), 2, 50)
     camera(0, 0)

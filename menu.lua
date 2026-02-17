@@ -1,6 +1,6 @@
 function update_menu()
     if btnp(5) then
-        mode = "playing"
+        change_mode("playing")
     end
 end
 
