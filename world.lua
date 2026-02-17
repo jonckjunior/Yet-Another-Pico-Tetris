@@ -591,6 +591,7 @@ function World:draw_world()
     self:draw_ghost_piece()
     self:draw_active_piece()
     self:draw_border()
+    self:draw_score_and_level()
 
     if self.state == WORLD_STATE.LINE_CLEAR then
         self:draw_line_clear_animation()
@@ -601,8 +602,28 @@ function World:draw_world()
     if self.state == WORLD_STATE.GAME_OVER then
         print("\f7\^o0ffgame over", 20, 60)
     end
-    print("score " .. tostring(self.score), 2, 50)
+    -- print("score" .. tostring(self.score), 2, 50)
     camera(0, 0)
+end
+
+function World:draw_score_and_level()
+    local y_offset = 127 - 6 * 5
+    local x_offset = 2
+    print_centered("level", x_offset, self.board_x - 1, y_offset, 7)
+    y_offset += 6
+    print_centered(tostring(self.level), x_offset, self.board_x - 1, y_offset, 7)
+
+    y_offset += 12
+    print_centered("score", x_offset, self.board_x - 1, y_offset, 7)
+    y_offset += 6
+    print_centered(tostring(self.score), x_offset, self.board_x - 1, y_offset, 7)
+end
+
+function print_centered(text, x_start, x_end, y, col)
+    local text_width = #text * 4
+    local region_width = x_end - x_start
+    local x = x_start + (region_width - text_width) / 2
+    print(text, x, y, col)
 end
 
 function World:draw_border()
