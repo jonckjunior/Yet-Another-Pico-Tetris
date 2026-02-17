@@ -622,7 +622,6 @@ function World:draw_world()
         print("\f7\^o0ffgame over", 50, 50)
         print("press x to go back to the menu", 0, 56 + 20)
     elseif self.state == WORLD_STATE.VICTORY then
-        cls()
         print("\f7\^o0ffvictory", 50, 50)
         print("press x to go back to the menu", 0, 56 + 20)
     end
