@@ -6,6 +6,59 @@ local WORLD_STATE = {
     VICTORY = "victory"
 }
 
+---@class Particle
+---@field x number
+---@field y number
+---@field vx number
+---@field vy number
+---@field color integer
+---@field lifetime integer
+---@field age integer
+local Particle = {}
+
+---Create a new particle
+---@param x number
+---@param y number
+---@param color integer
+---@return Particle
+function Particle:new(x, y, color)
+    local p = {}
+    p.x = x
+    p.y = y
+    p.vx = (rnd(1) - 0.5) * 0.3 -- Random horizontal drift
+    p.vy = -0.3 - rnd(0.4)      -- Slower upward velocity (fire rises slowly)
+    p.color = color
+    p.lifetime = 40 + rnd(20)   -- Random lifetime 40-60 frames
+    p.age = 0
+    self.__index = self
+    setmetatable(p, self)
+    return p
+end
+
+---Update particle physics
+function Particle:update()
+    self.age = self.age + 1
+    -- Fire-like movement: slow upward drift + horizontal waver
+    self.x = self.x + self.vx
+    self.y = self.y + self.vy
+    -- Horizontal oscillation (fire flicker)
+    self.vx = self.vx + (rnd(0.2) - 0.1)
+    -- Slow down over time (fire dissipates)
+    self.vy = self.vy * 0.98
+    self.vx = self.vx * 0.95
+end
+
+---Check if particle is still alive
+---@return boolean
+function Particle:is_alive()
+    return self.age < self.lifetime
+end
+
+---Draw the particle
+function Particle:draw()
+    pset(self.x, self.y, self.color)
+end
+
 ---@class World
 ---@field grid_spr integer
 ---@field grid table
@@ -34,6 +87,7 @@ local WORLD_STATE = {
 ---@field shake integer
 ---@field preview integer
 ---@field challenge Challenge
+---@field particles table
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -95,6 +149,7 @@ function World:new(challenge)
     w.shake = 0
     w.preview = 5
     w.challenge = challenge
+    w.particles = {}
 
     w:refill_queue()
     w:refill_queue()
@@ -117,6 +172,7 @@ function World:update_world()
     if self.state == WORLD_STATE.PLAYING then
         self:handle_input_playing()
         self:handle_auto_drop()
+        self:update_particles()
     elseif self.state == WORLD_STATE.LINE_CLEAR then
         self:update_line_clear_animation()
     elseif self.state == WORLD_STATE.GAME_OVER then
@@ -146,6 +202,17 @@ function World:update_game_over()
     if btnp(5) then
         change_mode("menu")
     end
+end
+
+function World:update_particles()
+    local alive_particles = {}
+    for _, particle in ipairs(self.particles) do
+        particle:update()
+        if particle:is_alive() then
+            add(alive_particles, particle)
+        end
+    end
+    self.particles = alive_particles
 end
 
 ---Source of truth for player input during gameplay. For player input during other game states, see other functions.
@@ -350,10 +417,38 @@ function World:spawn_next_piece()
     end
 end
 
+function World:create_particles_for_line_clear()
+    local columns = #self.grid[1]
+    local particles_per_block = 1 + #self.animation.lines
+    for _, cleared_row in ipairs(self.animation.lines) do
+        for column = 1, columns do
+            local sprite_idx = self.grid[cleared_row][column]
+            if sprite_idx ~= self.grid_spr then
+                -- Get actual pixel color from the sprite
+                -- Sample from center of sprite (3,3 in a 6x6 sprite)
+                local sprite_color = sget((sprite_idx % 16) * 8 + 3, flr(sprite_idx / 16) * 8 + 3)
+
+                -- Get block center position
+                local block_x = self.board_x + (column - 1) * self.block_size + self.block_size / 2
+                local block_y = self.board_y + (cleared_row - 1) * self.block_size + self.block_size / 2
+
+                -- Create particles based on number of lines cleared
+                for i = 1, particles_per_block do
+                    local px = block_x + (rnd(self.block_size) - self.block_size / 2)
+                    local py = block_y + (rnd(self.block_size) - self.block_size / 2)
+                    add(self.particles, Particle:new(px, py, sprite_color))
+                end
+            end
+        end
+    end
+end
+
 function World:clear_completed_lines()
     local rows = #self.grid
     local columns = #self.grid[1]
     local write_row = rows
+
+    self:create_particles_for_line_clear()
 
     -- Use the stored line numbers from animation
     for read_row = rows, 1, -1 do
@@ -619,6 +714,7 @@ function World:draw_world()
     self:draw_active_piece()
     self:draw_border()
     self:draw_score_and_level()
+    self:draw_particles()
 
     if self.state == WORLD_STATE.LINE_CLEAR then
         self:draw_line_clear_animation()
@@ -652,6 +748,12 @@ function print_centered(text, x_start, x_end, y, col)
     local region_width = x_end - x_start
     local x = x_start + (region_width - text_width) / 2
     print(text, x, y, col)
+end
+
+function World:draw_particles()
+    for _, particle in ipairs(self.particles) do
+        particle:draw()
+    end
 end
 
 function World:draw_border()
