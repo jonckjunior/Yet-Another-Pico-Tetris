@@ -32,6 +32,7 @@ local WORLD_STATE = {
 ---@field spawn_rotation integer
 ---@field animation table
 ---@field shake integer
+---@field preview integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -88,6 +89,7 @@ function World:new()
         duration = 10 -- Animation length in frames
     }
     w.shake = 0
+    w.preview = 5
 
     w:refill_queue()
     w:refill_queue()
@@ -129,9 +131,9 @@ function World:update_line_clear_animation()
     self.animation.timer = self.animation.timer + 1
 
     if self.animation.timer >= self.animation.duration then
+        self.state = WORLD_STATE.PLAYING
         self:clear_completed_lines()
         self:spawn_next_piece()
-        self.state = WORLD_STATE.PLAYING
     end
 end
 
@@ -324,7 +326,17 @@ function World:prepare_line_completion_animation(completed_rows, score_type)
     self.shake = 1 + #completed_rows
 end
 
+function World:check_victory_condition()
+    return self.lines_cleared >= 1
+end
+
 function World:spawn_next_piece()
+    if self:check_victory_condition() then
+        -- set it to victory and do not create another piece
+        self.state = WORLD_STATE.VICTORY
+        return
+    end
+
     self:create_new_active_piece()
 
     -- Check if new piece can fit (game over condition)
@@ -457,8 +469,8 @@ function World:create_new_active_piece()
     local piece_type = deli(self.piece_queue, 1)
     self.active_piece = TetrisPiece:new(piece_type, self.spawn_rotation, self.spawn_row, self.spawn_column)
 
-    -- Ensure enough for 6 previews
-    if #self.piece_queue < 6 then
+    -- Ensure enough for preview
+    if #self.piece_queue < self.preview then
         self:refill_queue()
     end
 
@@ -722,7 +734,7 @@ function World:draw_next_piece()
     local delta_row = 3
     local delta_column = 12
 
-    for i = 1, 5 do
+    for i = 1, self.preview do
         local next = TetrisPiece:new(self.piece_queue[i], 1, delta_row + (i - 1) * 3, delta_column)
         for block in all(next.shape) do
             self:draw_block(next.row + block[1], next.column + block[2], next.spr)
