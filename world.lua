@@ -36,6 +36,8 @@ local WORLD_STATE = {
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
+---Creates a new world
+---@return World
 function World:new()
     local w = {}
 
@@ -93,7 +95,7 @@ function World:new()
 
     w:refill_queue()
     w:refill_queue()
-    w:spawn_next_piece()
+    w:finish_turn()
 
     -- w:setup_tspin_test()
 
@@ -133,7 +135,7 @@ function World:update_line_clear_animation()
     if self.animation.timer >= self.animation.duration then
         self.state = WORLD_STATE.PLAYING
         self:clear_completed_lines()
-        self:spawn_next_piece()
+        self:finish_turn()
     end
 end
 
@@ -217,7 +219,7 @@ function World:handle_hold()
     if self.held_piece == nil then
         -- just store the active piece in the held position
         self.held_piece = self.active_piece
-        self:spawn_next_piece()
+        self:finish_turn()
     else
         -- swap held and active pieces
         local temp = self.active_piece
@@ -310,7 +312,7 @@ function World:try_move_piece_down()
             if score_type then
                 self:update_score(score_type, 0)
             end
-            self:spawn_next_piece()
+            self:finish_turn()
         end
     end
 end
@@ -330,13 +332,16 @@ function World:check_victory_condition()
     return self.lines_cleared >= 1
 end
 
-function World:spawn_next_piece()
+function World:finish_turn()
     if self:check_victory_condition() then
         -- set it to victory and do not create another piece
         self.state = WORLD_STATE.VICTORY
         return
     end
+    self:spawn_next_piece()
+end
 
+function World:spawn_next_piece()
     self:create_new_active_piece()
 
     -- Check if new piece can fit (game over condition)
