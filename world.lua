@@ -213,7 +213,7 @@ function World:handle_hold()
         self.held_piece = temp
     end
     -- always reset the rotation of the held piece
-    self.held_piece.rotation = 1
+    self.held_piece:set_rotation(1)
 
     -- reset position and rotation of the active piece
     self.active_piece.row = self.spawn_row
@@ -590,6 +590,7 @@ function World:draw_world()
     self:draw_held_piece()
     self:draw_ghost_piece()
     self:draw_active_piece()
+    self:draw_border()
 
     if self.state == WORLD_STATE.LINE_CLEAR then
         self:draw_line_clear_animation()
@@ -602,6 +603,42 @@ function World:draw_world()
     end
     print("score " .. tostring(self.score), 2, 50)
     camera(0, 0)
+end
+
+function World:draw_border()
+    local right_side_grid = self.board_x + #self.grid[1] * self.block_size
+    -- left border
+    line(self.board_x - 1, self.board_y, self.board_x - 1, self.board_y + #self.grid * self.block_size, 7)
+    -- right border
+    line(right_side_grid, self.board_y,
+        right_side_grid, self.board_y + #self.grid * self.block_size, 7)
+    -- bottom border
+    line(self.board_x - 1, 126, right_side_grid, 126, 7)
+
+
+    local enclosing_height = self.block_size * 2 * 6 + 6 * self.block_size + 5
+    -- enclosing right border for next piece
+    line(127, 0, 127, enclosing_height - 3, 7)
+
+    -- enclosing top border for next piece
+    line(right_side_grid, 0, 127, 0, 7)
+
+    -- enclosing bottom border for the next piece
+    line(right_side_grid, enclosing_height, 127 - 3, enclosing_height, 7)
+
+    line(127, enclosing_height - 3, 127 - 3, enclosing_height, 7)
+
+
+    -- enclosing top border for held piece
+    line(0, 0, self.board_x - 1, 0, 7)
+
+    -- enclosing left border for held piece
+    line(0, 0, 0, self.block_size * 4 - 3, 7)
+
+    -- enclosing bottom border for held piece
+    line(3, self.block_size * 4, self.board_x - 1, self.block_size * 4)
+
+    line(0, self.block_size * 4 - 3, 3, self.block_size * 4, 7)
 end
 
 function World:draw_line_clear_animation()
@@ -635,14 +672,8 @@ function World:draw_line_clear_animation()
 end
 
 function World:draw_held_piece()
-    local delta_row = 5
+    local delta_row = 3
     local delta_column = -3
-    print(
-        "hold",
-        self.board_x + (delta_column - 1) * self.block_size,
-        self.board_y + (delta_row - 1) * self.block_size - self.block_size,
-        7
-    )
     if not self.held_piece then return end
 
     local held = self.held_piece
@@ -655,14 +686,8 @@ function World:draw_held_piece()
 end
 
 function World:draw_next_piece()
-    local delta_row = 5
+    local delta_row = 3
     local delta_column = 12
-    print(
-        "next",
-        self.board_x + (delta_column - 1) * self.block_size,
-        self.board_y + (delta_row - 1) * self.block_size - self.block_size,
-        7
-    )
 
     for i = 1, 6 do
         local next = TetrisPiece:new(self.piece_queue[i], 1, delta_row + (i - 1) * 3, delta_column)

@@ -241,3 +241,10 @@ function TetrisPiece:rotate(rot)
     self.rotation = (((self.rotation + rot) % #TETRIS_SHAPES[self.shapeId]) + 1)
     self.shape = TETRIS_SHAPES[self.shapeId][self.rotation]
 end
+
+---Set a rotation for a tetris piece.
+---@param rot integer
+function TetrisPiece:set_rotation(rot)
+    self.rotation = rot
+    self.shape = TETRIS_SHAPES[self.shapeId][self.rotation]
+end
