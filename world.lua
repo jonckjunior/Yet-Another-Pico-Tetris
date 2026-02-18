@@ -145,7 +145,7 @@ function World:new(challenge)
         type = nil,   -- "line_clear", "tspin"
         timer = 0,    -- Animation frame counter
         lines = {},   -- Array of line numbers being cleared
-        duration = 10 -- Animation length in frames
+        duration = 12 -- Animation length in frames
     }
     w.shake = 0
     w.preview = 5
