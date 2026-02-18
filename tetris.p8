@@ -43,7 +43,7 @@ end
 
 function change_mode(new_mode)
     if new_mode == "playing" then
-        world = World:new(CHALLENGES.do_a_tspin)
+        world = World:new(CHALLENGES.clear_15_lines)
     end
     mode = new_mode
 end

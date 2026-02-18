@@ -157,7 +157,7 @@ function World:new(challenge)
     w:refill_queue()
     w:finish_turn()
 
-    w:setup_tspin_test()
+    -- w:setup_tspin_test()
 
     return w
 end
