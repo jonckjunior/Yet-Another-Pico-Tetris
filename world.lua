@@ -580,21 +580,27 @@ end
 function World:update_score(score_type, amount)
     if score_type == "lines" then
         local points = { [1] = 100, [2] = 300, [3] = 500, [4] = 800 }
+        self.lines_cleared = self.lines_cleared + amount
+        self.level = flr(self.lines_cleared / 10) + 1
+        self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
         self.score = self.score + points[amount] * self.level
     elseif score_type == "tspin" then
         local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
+        self.lines_cleared = self.lines_cleared + amount
+        self.level = flr(self.lines_cleared / 10) + 1
+        self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
         self.score = self.score + (points[amount] or 0) * self.level
     elseif score_type == "mini_tspin" then
         local points = { [0] = 100, [1] = 200, [2] = 400 }
+        self.lines_cleared = self.lines_cleared + amount
+        self.level = flr(self.lines_cleared / 10) + 1
+        self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
         self.score = self.score + (points[amount] or 0) * self.level
     elseif score_type == "soft_drop" then
         self.score = self.score + amount
     elseif score_type == "hard_drop" then
         self.score = self.score + amount * 2
     end
-    self.lines_cleared = self.lines_cleared + amount
-    self.level = flr(self.lines_cleared / 10) + 1
-    self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
 end
 
 ---Replenishes the piece bag.
