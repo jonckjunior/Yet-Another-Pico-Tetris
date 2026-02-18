@@ -15,7 +15,7 @@ function _init()
     world = nil
 end
 
-function _update()
+function _update60()
     if mode == "playing" then
         world:update_world()
         update_ui()

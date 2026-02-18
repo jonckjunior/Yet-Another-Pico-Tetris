@@ -88,6 +88,7 @@ end
 ---@field preview integer
 ---@field challenge Challenge
 ---@field particles table
+---@field drop_trails table
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -150,6 +151,7 @@ function World:new(challenge)
     w.preview = 5
     w.challenge = challenge
     w.particles = {}
+    w.drop_trails = {}
 
     w:refill_queue()
     w:refill_queue()
@@ -173,6 +175,7 @@ function World:update_world()
         self:handle_input_playing()
         self:handle_auto_drop()
         self:update_particles()
+        self:update_drop_trails()
     elseif self.state == WORLD_STATE.LINE_CLEAR then
         self:update_line_clear_animation()
     elseif self.state == WORLD_STATE.GAME_OVER then
@@ -213,6 +216,48 @@ function World:update_particles()
         end
     end
     self.particles = alive_particles
+end
+
+function World:update_drop_trails()
+    local active_trails = {}
+    for _, trail in ipairs(self.drop_trails) do
+        trail.timer = trail.timer + 1
+
+        -- Eased progression (quad ease-out for snappy feel)
+        local t = trail.timer / trail.duration
+        local eased_t = 1 - (1 - t) * (1 - t)
+
+        -- Shrink from top down
+        trail.current_top = trail.start_y + (trail.end_y - trail.start_y) * eased_t
+
+        if trail.timer < trail.duration then
+            add(active_trails, trail)
+        end
+    end
+    self.drop_trails = active_trails
+end
+
+---Create drop trails for hard drop animation
+---@param original_row integer
+function World:create_drop_trails(original_row)
+    for _, block in pairs(self.active_piece.shape) do
+        local block_col = self.active_piece.column + block[2]
+        local original_block_row = original_row + block[1]
+        local final_block_row = self.active_piece.row + block[1]
+
+        if final_block_row > original_block_row then
+            local trail = {
+                x = self.board_x + (block_col - 1) * self.block_size + self.block_size / 2,
+                start_y = self.board_y + (original_block_row - 1) * self.block_size,
+                end_y = self.board_y + (final_block_row - 1) * self.block_size,
+                current_top = self.board_y + (original_block_row - 1) * self.block_size,
+                color = self.active_piece.spr,
+                timer = 0,
+                duration = 5
+            }
+            add(self.drop_trails, trail)
+        end
+    end
 end
 
 ---Source of truth for player input during gameplay. For player input during other game states, see other functions.
@@ -256,12 +301,16 @@ function World:handle_input_playing()
         self.timer.hard = max(0, self.timer.hard - 1)
         if self.timer.hard == 0 then
             self.timer.hard = 10
+            local original_row = self.active_piece.row
+
             -- It starts at 1 because the piece will move down at least 1 row
             local drop_distance = 1
             while self:can_move(1, 0) do
                 self.active_piece.row = self.active_piece.row + 1
                 drop_distance = drop_distance + 1
             end
+
+            self:create_drop_trails(original_row)
             self:update_score("hard_drop", drop_distance)
             self:try_move_piece_down()
         end
@@ -711,6 +760,7 @@ function World:draw_world()
     self:draw_next_piece()
     self:draw_held_piece()
     self:draw_ghost_piece()
+    self:draw_drop_trails()
     self:draw_active_piece()
     self:draw_border()
     self:draw_score_and_level()
@@ -856,6 +906,25 @@ function World:draw_grid()
             self:draw_block(row, column, self.grid[row][column] or self.grid_spr)
         end
     end
+end
+
+---Draws drop trails for hard drop animation
+function World:draw_drop_trails()
+    -- fillp(0xa5a5)
+    for _, trail in ipairs(self.drop_trails) do
+        -- Get actual sprite color instead of sprite index
+        local sprite_color = sget((trail.color % 16) * 8 + 3, flr(trail.color / 16) * 8 + 3)
+
+        -- Draw stacked rectangles from current_top down to end_y
+        -- Each rectangle is a 6x6 block with 1px darker border
+        local y = trail.current_top
+        while y < trail.end_y do
+            local block_height = min(self.block_size, trail.end_y - y)
+            rectfill(trail.x - 3, y, trail.x + 2, y + block_height - 1, sprite_color)
+            y += self.block_size
+        end
+    end
+    -- fillp(0)
 end
 
 ---Draws the active piece on the screen
