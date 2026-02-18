@@ -90,6 +90,9 @@ end
 ---@field particles table
 ---@field drop_trails table
 ---@field drop_interval_max integer
+---@field ui_color integer
+---@field border_color integer
+---@field network ParticleNetwork
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -158,6 +161,9 @@ function World:new(challenge)
     w:refill_queue()
     w:refill_queue()
     w:finish_turn()
+    w.ui_color = 5
+    w.border_color = 1
+    w.network = ParticleNetwork:new(40, 24, 1)
 
     -- w:setup_tspin_test()
 
@@ -173,6 +179,7 @@ end
 
 ---Main gameplay loop for the world.
 function World:update_world()
+    self.network:update()
     if self.state == WORLD_STATE.PLAYING then
         self:handle_input_playing()
         self:handle_auto_drop()
@@ -760,6 +767,7 @@ function World:draw_world()
     else
         camera(0, 0)
     end
+    self.network:draw()
     self:draw_grid()
     self:draw_next_piece()
     self:draw_held_piece()
@@ -787,14 +795,14 @@ end
 function World:draw_score_and_level()
     local y_offset = 127 - 6 * 5
     local x_offset = 2
-    print_centered("level", x_offset, self.board_x - 1, y_offset, 7)
+    print_centered("level", x_offset, self.board_x - 1, y_offset, self.ui_color)
     y_offset += 6
-    print_centered(tostring(self.level), x_offset, self.board_x - 1, y_offset, 7)
+    print_centered(tostring(self.level), x_offset, self.board_x - 1, y_offset, self.ui_color)
 
     y_offset += 12
-    print_centered("score", x_offset, self.board_x - 1, y_offset, 7)
+    print_centered("score", x_offset, self.board_x - 1, y_offset, self.ui_color)
     y_offset += 6
-    print_centered(tostring(self.score), x_offset, self.board_x - 1, y_offset, 7)
+    print_centered(tostring(self.score), x_offset, self.board_x - 1, y_offset, self.ui_color)
 end
 
 function print_centered(text, x_start, x_end, y, col)
@@ -813,37 +821,13 @@ end
 function World:draw_border()
     local right_side_grid = self.board_x + #self.grid[1] * self.block_size
     -- left border
-    line(self.board_x - 1, self.board_y, self.board_x - 1, self.board_y + #self.grid * self.block_size, 7)
+    line(self.board_x - 1, self.board_y, self.board_x - 1, self.board_y + #self.grid * self.block_size, self
+        .border_color)
     -- right border
     line(right_side_grid, self.board_y,
-        right_side_grid, self.board_y + #self.grid * self.block_size, 7)
+        right_side_grid, self.board_y + #self.grid * self.block_size, self.border_color)
     -- bottom border
-    line(self.board_x - 1, 126, right_side_grid, 126, 7)
-
-
-    local enclosing_height = self.block_size * 2 * 5 + 5 * self.block_size + 5
-    -- enclosing right border for next piece
-    line(127, 0, 127, enclosing_height - 3, 7)
-
-    -- enclosing top border for next piece
-    line(right_side_grid, 0, 127, 0, 7)
-
-    -- enclosing bottom border for the next piece
-    line(right_side_grid, enclosing_height, 127 - 3, enclosing_height, 7)
-
-    line(127, enclosing_height - 3, 127 - 3, enclosing_height, 7)
-
-
-    -- enclosing top border for held piece
-    line(0, 0, self.board_x - 1, 0, 7)
-
-    -- enclosing left border for held piece
-    line(0, 0, 0, self.block_size * 4 - 3, 7)
-
-    -- enclosing bottom border for held piece
-    line(3, self.block_size * 4, self.board_x - 1, self.block_size * 4)
-
-    line(0, self.block_size * 4 - 3, 3, self.block_size * 4, 7)
+    line(self.board_x - 1, 126, right_side_grid, 126, self.border_color)
 end
 
 function World:draw_line_clear_animation()
@@ -1048,9 +1032,11 @@ end
 ---@param column integer
 ---@param sprite_number integer
 function World:draw_block(row, column, sprite_number)
+    palt(0, false)
     spr(
         sprite_number,
         self.board_x + (column - 1) * self.block_size,
         self.board_y + (row - 1) * self.block_size
     )
+    palt(0, true)
 end
