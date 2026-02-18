@@ -106,7 +106,7 @@ function World:new(challenge)
     self.__index = self
     setmetatable(w, self)
 
-    w.grid_spr = 8
+    w.grid_spr = 0
     -- Initialize grid
     w.grid = {}
     for i = 1, 22 do
@@ -471,9 +471,11 @@ end
 function World:spawn_next_piece()
     self:create_new_active_piece()
 
-    -- Check if new piece can fit (game over condition)
-    if not self:can_move(0, 0) then
-        self.state = WORLD_STATE.GAME_OVER
+    -- Check if there's any piece above the line
+    for column = 1, #self.grid[1] do
+        if self.grid[2][column] ~= self.grid_spr then
+            self.state = WORLD_STATE.GAME_OVER
+        end
     end
 end
 
@@ -1036,14 +1038,15 @@ end
 ---@param column integer
 ---@param sprite_number integer
 function World:draw_block(row, column, sprite_number)
+    local x0 = self.board_x + (column - 1) * self.block_size
+    local y0 = self.board_y + (row - 1) * self.block_size
     if sprite_number == self.grid_spr then
-        palt(0, false)
+        rectfill(x0, y0, x0 + self.block_size - 1, y0 + self.block_size - 1, 0)
+    else
+        spr(
+            sprite_number,
+            x0,
+            y0
+        )
     end
-
-    spr(
-        sprite_number,
-        self.board_x + (column - 1) * self.block_size,
-        self.board_y + (row - 1) * self.block_size
-    )
-    palt(0, true)
 end
