@@ -89,6 +89,7 @@ end
 ---@field challenge Challenge
 ---@field particles table
 ---@field drop_trails table
+---@field drop_interval_max integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -114,7 +115,8 @@ function World:new(challenge)
 
     -- Now initialize other fields
     w.piece_queue = {}
-    w.drop_interval = 60
+    w.drop_interval_max = 60
+    w.drop_interval = w.drop_interval_max
     w.block_size = 6
     w.state = WORLD_STATE.PLAYING
     w.score = 0
@@ -578,27 +580,21 @@ end
 function World:update_score(score_type, amount)
     if score_type == "lines" then
         local points = { [1] = 100, [2] = 300, [3] = 500, [4] = 800 }
-        self.lines_cleared = self.lines_cleared + amount
-        self.level = flr(self.lines_cleared / 10) + 1
-        self.drop_interval = max(5, 30 - (self.level - 1))
         self.score = self.score + points[amount] * self.level
     elseif score_type == "tspin" then
         local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
-        self.lines_cleared = self.lines_cleared + amount
-        self.level = flr(self.lines_cleared / 10) + 1
-        self.drop_interval = max(5, 30 - (self.level - 1))
         self.score = self.score + (points[amount] or 0) * self.level
     elseif score_type == "mini_tspin" then
         local points = { [0] = 100, [1] = 200, [2] = 400 }
-        self.lines_cleared = self.lines_cleared + amount
-        self.level = flr(self.lines_cleared / 10) + 1
-        self.drop_interval = max(5, 30 - (self.level - 1))
         self.score = self.score + (points[amount] or 0) * self.level
     elseif score_type == "soft_drop" then
         self.score = self.score + amount
     elseif score_type == "hard_drop" then
         self.score = self.score + amount * 2
     end
+    self.lines_cleared = self.lines_cleared + amount
+    self.level = flr(self.lines_cleared / 10) + 1
+    self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
 end
 
 ---Replenishes the piece bag.
