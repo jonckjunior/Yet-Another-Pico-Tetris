@@ -181,6 +181,8 @@ function World:update_world()
     elseif self.state == WORLD_STATE.GAME_OVER then
         self:update_game_over()
     elseif self.state == WORLD_STATE.VICTORY then
+        self:update_particles()
+        self:update_drop_trails()
         self:update_victory()
     end
 end
