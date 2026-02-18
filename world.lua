@@ -889,11 +889,15 @@ end
 ---Draws the grid on the screen
 function World:draw_grid()
     --We skip the first two rows
-    for row = 3, #self.grid do
+    for row = 1, #self.grid do
         for column = 1, #self.grid[row] do
             self:draw_block(row, column, self.grid[row][column] or self.grid_spr)
         end
     end
+    local y0 = self.board_y + self.block_size * 2 - 1
+    fillp(0x5a5a)
+    line(self.board_x, y0, self.board_x + self.block_size * #self.grid[1], y0, self.border_color)
+    fillp()
 end
 
 ---Draws drop trails for hard drop animation
@@ -1032,7 +1036,10 @@ end
 ---@param column integer
 ---@param sprite_number integer
 function World:draw_block(row, column, sprite_number)
-    palt(0, false)
+    if sprite_number == self.grid_spr then
+        palt(0, false)
+    end
+
     spr(
         sprite_number,
         self.board_x + (column - 1) * self.block_size,
