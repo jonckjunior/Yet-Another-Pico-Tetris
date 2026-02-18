@@ -29,7 +29,7 @@ function _update60()
 end
 
 function _draw()
-    cls(15)
+    cls(0)
     if mode == "playing" then
         world:draw_world()
         draw_ui()
