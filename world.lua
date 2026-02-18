@@ -114,7 +114,7 @@ function World:new(challenge)
 
     -- Now initialize other fields
     w.piece_queue = {}
-    w.drop_interval = 30
+    w.drop_interval = 60
     w.block_size = 6
     w.state = WORLD_STATE.PLAYING
     w.score = 0
@@ -950,10 +950,92 @@ function World:draw_ghost_piece()
         ghost_row = ghost_row + 1
     end
 
-    for _, block in pairs(self.active_piece.shape) do
-        local block_row = ghost_row + block[1]
-        local block_column = self.active_piece.column + block[2]
-        self:draw_block(block_row, block_column, self.active_piece.spr + 16)
+    -- Draw only the perimeter outline
+    self:draw_piece_outline(ghost_row, self.active_piece.column, self.active_piece.shape, self.active_piece.spr)
+end
+
+---Draw only the perimeter outline of a piece (no internal lines)
+---@param piece_row integer
+---@param piece_col integer
+---@param shape table
+---@param sprite_num integer
+function World:draw_piece_outline(piece_row, piece_col, shape, sprite_num)
+    -- Get the sprite color
+    local sprite_color = sget((sprite_num % 16) * 8 + 3, flr(sprite_num / 16) * 8 + 3)
+
+    -- Build a set of occupied positions for fast lookup
+    local occupied = {}
+    for _, block in pairs(shape) do
+        local key = block[1] .. "," .. block[2]
+        occupied[key] = true
+    end
+
+    -- Helper to check if a position is occupied
+    local function is_occupied(r, c)
+        return occupied[r .. "," .. c] == true
+    end
+
+    -- Draw each block's edges only if they're on the perimeter
+    for _, block in pairs(shape) do
+        local block_row = piece_row + block[1]
+        local block_col = piece_col + block[2]
+
+        -- Skip if off-screen
+        if block_row <= 3 then
+            goto continue
+        end
+
+        local x = self.board_x + (block_col - 1) * self.block_size
+        local y = self.board_y + (block_row - 1) * self.block_size
+
+        local has_top = is_occupied(block[1] - 1, block[2])
+        local has_bottom = is_occupied(block[1] + 1, block[2])
+        local has_left = is_occupied(block[1], block[2] - 1)
+        local has_right = is_occupied(block[1], block[2] + 1)
+
+        -- Draw edges only where there's no adjacent block
+        -- Top edge
+        if not has_top then
+            line(x, y, x + self.block_size - 1, y, sprite_color)
+        end
+
+        -- Bottom edge
+        if not has_bottom then
+            line(x, y + self.block_size - 1, x + self.block_size - 1, y + self.block_size - 1, sprite_color)
+        end
+
+        -- Left edge
+        if not has_left then
+            line(x, y, x, y + self.block_size - 1, sprite_color)
+        end
+
+        -- Right edge
+        if not has_right then
+            line(x + self.block_size - 1, y, x + self.block_size - 1, y + self.block_size - 1, sprite_color)
+        end
+
+        -- Draw corner pixels for inside corners (where two edges meet at 90°)
+        -- Top-left inside corner
+        if has_top and has_left and not is_occupied(block[1] - 1, block[2] - 1) then
+            pset(x, y, sprite_color)
+        end
+
+        -- Top-right inside corner
+        if has_top and has_right and not is_occupied(block[1] - 1, block[2] + 1) then
+            pset(x + self.block_size - 1, y, sprite_color)
+        end
+
+        -- Bottom-left inside corner
+        if has_bottom and has_left and not is_occupied(block[1] + 1, block[2] - 1) then
+            pset(x, y + self.block_size - 1, sprite_color)
+        end
+
+        -- Bottom-right inside corner
+        if has_bottom and has_right and not is_occupied(block[1] + 1, block[2] + 1) then
+            pset(x + self.block_size - 1, y + self.block_size - 1, sprite_color)
+        end
+
+        ::continue::
     end
 end
 
