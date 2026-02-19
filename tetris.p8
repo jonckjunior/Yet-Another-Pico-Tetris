@@ -14,7 +14,7 @@ function _init()
     frame_timer = 0
     mode = "menu"
     world = nil
-    change_mode("playing")
+    -- change_mode("playing")
 end
 
 function _update60()
