@@ -20,7 +20,7 @@ function draw_menu()
     local offset = sin(t * 0.5) * 2 -- speed * amplitude
 
     circfill(x + logo_width / 2, y + offset + logo_height / 2, 30, 1)
-    local drk = { [0] = 0, 0, 1, 1, 2, 1, 5, 6, 2, 4, 9, 3, 1, 1, 2, 5 }
+
     for i = 1, 15 do
         pal(i, drk[i])
     end

@@ -11,7 +11,7 @@ __lua__
 
 function _init()
     DEBUG = false
-    frame_timer = 0
+    drk = { [0] = 0, 0, 1, 1, 2, 1, 5, 6, 2, 4, 9, 3, 1, 1, 2, 5 }
     mode = "menu"
     world = nil
     -- change_mode("playing")
@@ -26,7 +26,6 @@ function _update60()
     end
 
     -- transition:update()
-    frame_timer += 1
 end
 
 function _draw()
