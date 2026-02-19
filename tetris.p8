@@ -14,6 +14,7 @@ function _init()
     drk = { [0] = 0, 0, 1, 1, 2, 1, 5, 6, 2, 4, 9, 3, 1, 1, 2, 5 }
     mode = "menu"
     world = nil
+    -- music(0)
     -- change_mode("playing")
 end
 
