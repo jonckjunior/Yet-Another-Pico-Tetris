@@ -10,6 +10,8 @@ __lua__
 #include menu.lua
 
 function _init()
+    -- enables hidden colors
+    poke(0x5f2e, 1)
     DEBUG = false
     drk = { [0] = 0, 0, 1, 1, 2, 1, 5, 6, 2, 4, 9, 3, 1, 1, 2, 5 }
     mode = "menu"

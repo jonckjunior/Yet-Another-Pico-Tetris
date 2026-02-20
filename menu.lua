@@ -27,19 +27,31 @@ function bevel_box(x, y, w, h, bg, dark)
     -- background
     rect(x, y, x + w - 1, y + h - 1, 7)
     rect(x - 1, y - 1, x + w, y + h, 0)
-    for dx = 0, w - 1 do
-        for dy = 0, h - 1 do
+    for dx = 1, w - 2 do
+        for dy = 1, h - 2 do
             darken_pixel(x + dx, y + dy)
         end
     end
 end
 
 function draw_diagonal_lines()
+    pal(6, 129, 1)
     local scroll = (time() * 20) % 16
     for i = -128, 128, 8 do
         local x1 = i + scroll
         local x2 = i + 128 + scroll
-        line(x1, 128, x2, 0, 1)
+        line(x1, 128, x2, 0, 6)
+    end
+end
+
+function draw_cursor(x, y)
+    local height = 6
+    local width = { 2, 3, 4, 5, 4, 3, 2 }
+    for dy = 0, height do
+        for dx = 0, width[dy + 1] - 1 do
+            local c = (dx == 0 or dx == width[dy + 1] - 1) and 0 or 7
+            pset(x + dx, y + dy, c)
+        end
     end
 end
 
@@ -60,13 +72,11 @@ function draw_menu()
         pal(i, drk[i])
     end
     spr(16, x + 2, y + offset + 2, logo_width, logo_height)
-    pal()
+    pal(0)
     spr(16, x, y + offset, logo_width, logo_height)
     local t = sin(time() * 4)
-    local col = (t > 0) and 7 or 6
-    -- print("\f7\^o0ffgame over", 50, 50)
-    -- print("\f7\^o0ffpress x to start", 30, 76, col)
-
+    local col = (t > 0) and 7 or 5
     bevel_box(40, 80, 50, 30, 13, 1)
-    print("\^o1ffstart", 50, 90, col)
+    print("start", 50, 90, col)
+    draw_cursor(50 - 6, 89)
 end
