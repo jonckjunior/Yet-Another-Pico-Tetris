@@ -6,7 +6,7 @@ end
 
 dark_map = {
     [7] = 6,
-    [6] = 5,
+    [6] = 6,
     [5] = 1,
     [1] = 5,
     [12] = 13,
@@ -77,6 +77,6 @@ function draw_menu()
     local t = sin(time() * 4)
     local col = (t > 0) and 7 or 5
     bevel_box(40, 80, 50, 30, 13, 1)
-    print("start", 50, 90, col)
-    draw_cursor(50 - 6, 89)
+    print("start", 50, 92, col)
+    draw_cursor(50 - 7, 91)
 end
