@@ -1,6 +1,25 @@
+menu_items = {
+    "start",
+    "mode: classic",
+    "options"
+}
+
+selected = 1
+
 function update_menu()
+    if btnp(2) then selected -= 1 end -- up
+    if btnp(3) then selected += 1 end -- down
+
+    selected = mid(1, selected, #menu_items)
+
     if btnp(5) then
-        change_mode("playing")
+        if selected == 1 then
+            change_mode("playing")
+        elseif selected == 2 then
+            -- cycle mode
+        elseif selected == 3 then
+            change_mode("options")
+        end
     end
 end
 
@@ -23,12 +42,13 @@ function darken_pixel(x, y)
     end
 end
 
-function bevel_box(x, y, w, h, bg, dark)
-    -- background
-    rect(x, y, x + w - 1, y + h - 1, 7)
-    rect(x - 1, y - 1, x + w, y + h, 0)
-    for dx = 1, w - 2 do
-        for dy = 1, h - 2 do
+function bevel_box(x, y, w, h)
+    -- white border
+    rect(x - 1, y - 1, x + w, y + h, 7)
+    -- black border
+    rect(x - 2, y - 2, x + w + 1, y + h + 1, 0)
+    for dx = 0, w - 1 do
+        for dy = 0, h - 1 do
             darken_pixel(x + dx, y + dy)
         end
     end
@@ -55,6 +75,38 @@ function draw_cursor(x, y)
     end
 end
 
+function draw_menu_items(box_x, box_y, box_w, box_h)
+    bevel_box(box_x, box_y, box_w, box_h)
+    local n = #menu_items
+    local item_h = box_h / n
+
+    for i = 1, n do
+        local slice_y = box_y + (i - 1) * item_h
+
+        -- highlight full slice if selected
+        if i == selected then
+            rectfill(
+                box_x,
+                slice_y,
+                box_x + box_w - 1,
+                slice_y + item_h,
+                1
+            )
+            -- line(box_x, slice_y - 1, box_x + box_w - 1, slice_y - 1, 6)
+            -- line(box_x, slice_y + item_h + 1, box_x + box_w - 1, slice_y + item_h + 1, 6)
+        end
+
+        -- center text inside its slice
+        local text = menu_items[i]
+        local text_w = #text * 4
+        local text_x = box_x + (box_w - text_w) / 2
+        local text_y = slice_y + (item_h - 6) / 2 + 1 -- 6px font height
+
+        local col = (i == selected) and 7 or 5
+        print(text, text_x, text_y, col)
+    end
+end
+
 function draw_menu()
     draw_diagonal_lines()
     local logo_width = 62
@@ -74,9 +126,10 @@ function draw_menu()
     spr(16, x + 2, y + offset + 2, logo_width, logo_height)
     pal(0)
     spr(16, x, y + offset, logo_width, logo_height)
-    local t = sin(time() * 4)
-    local col = (t > 0) and 7 or 5
-    bevel_box(40, 80, 50, 30, 13, 1)
-    print("start", 50, 92, col)
-    draw_cursor(50 - 7, 91)
+
+    local box_y = 82
+    local box_w = 60
+    local box_h = 37
+    local box_x = (127 - box_w) / 2
+    draw_menu_items(box_x, box_y, box_w, box_h)
 end

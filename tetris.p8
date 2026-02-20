@@ -45,6 +45,7 @@ function _draw()
 end
 
 function change_mode(new_mode)
+    pal()
     if new_mode == "playing" then
         world = World:new(CHALLENGES.clear_15_lines)
     end
