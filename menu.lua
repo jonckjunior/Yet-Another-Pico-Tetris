@@ -18,7 +18,7 @@ function update_menu()
         elseif selected == 2 then
             -- cycle mode
         elseif selected == 3 then
-            change_mode("options")
+            -- change_mode("options")
         end
     end
 end
