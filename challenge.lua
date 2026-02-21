@@ -87,4 +87,17 @@ CHALLENGES = {
             world.drop_interval = 5
         end
     ),
+    Challenge:new("perfect", "get a perfect clear (no pieces after clearing lines)",
+        function(world) -- victory
+            local row = #world.grid
+            for column = 1, #world.grid[1] do
+                if world.grid[row][column] ~= world.grid_spr then
+                    return false
+                end
+            end
+            return world.lines_cleared > 0
+        end,
+        no_defeat(),
+        no_update()
+    ),
 }
