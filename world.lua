@@ -145,7 +145,7 @@ function World:new(challenge)
     w.is_mini_tspin = false
     w.last_action = nil
     w.last_rotation_kick = nil
-    w.spawn_row = 1
+    w.spawn_row = 2
     w.spawn_column = 5
     w.spawn_rotation = 1
     w.animation = {
@@ -170,6 +170,10 @@ function World:new(challenge)
     w:refill_queue()
     w:finish_turn()
 
+    if w.challenge.on_init then
+        w.challenge.on_init(w)
+    end
+
     -- w:setup_tspin_test()
 
     return w
@@ -187,14 +191,15 @@ function World:update_world()
     self.network:update()
     if self.state == WORLD_STATE.PLAYING then
         self.frame_count += 1
-        self:handle_input_playing()
-        self:handle_auto_drop()
-        self:update_particles()
-        self:update_drop_trails()
 
         if self.challenge.on_update then
             self.challenge.on_update(self)
         end
+
+        self:handle_input_playing()
+        self:handle_auto_drop()
+        self:update_particles()
+        self:update_drop_trails()
     elseif self.state == WORLD_STATE.LINE_CLEAR then
         self:update_line_clear_animation()
     elseif self.state == WORLD_STATE.GAME_OVER then
@@ -490,6 +495,11 @@ function World:spawn_next_piece()
         if self.grid[2][column] ~= self.grid_spr then
             self.state = WORLD_STATE.GAME_OVER
         end
+    end
+
+    -- Check if it's invalid
+    if not self:can_move(0, 0) then
+        self.state = WORLD_STATE.GAME_OVER
     end
 end
 
