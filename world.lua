@@ -769,7 +769,8 @@ function World:draw_world()
     else
         camera(0, 0)
     end
-    self.network:draw()
+    -- self.network:draw()
+    self:draw_diagonal_lines()
     self:draw_grid()
     self:draw_next_piece()
     self:draw_held_piece()
@@ -1048,5 +1049,16 @@ function World:draw_block(row, column, sprite_number)
             x0,
             y0
         )
+    end
+end
+
+function World:draw_diagonal_lines()
+    local c = 11
+    pal(c, 129, 1)
+    local scroll = (time() * 20) % 16
+    for i = -128, 128, 8 do
+        local x1 = i + scroll
+        local x2 = i + 128 + scroll
+        line(x1, 128, x2, 0, c)
     end
 end

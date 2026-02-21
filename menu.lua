@@ -12,7 +12,7 @@ function update_menu()
 
     selected = mid(1, selected, #menu_items)
 
-    if btnp(5) then
+    if btnp(5) or btnp(4) then
         if selected == 1 then
             change_mode("playing")
         elseif selected == 2 then
