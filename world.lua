@@ -631,7 +631,7 @@ function World:update_score(score_type, amount)
         self.score = self.score + points[amount] * self.level
 
         -- Add time bonus for time attack mode
-        if self.time_mode == "countdown" and self.time_remaining then
+        if self.challenge.name == "rush" and self.time_remaining then
             local time_bonus = { [1] = 60 * 3, [2] = 60 * 5, [3] = 60 * 8, [4] = 60 * 12 } -- 3s, 5s, 8s, 12s
             self.time_remaining += time_bonus[amount]
         end
@@ -643,7 +643,7 @@ function World:update_score(score_type, amount)
         self.score = self.score + (points[amount] or 0) * self.level
 
         -- Add time bonus for time attack mode (bonus for t-spins!)
-        if self.time_mode == "countdown" and self.time_remaining and amount > 0 then
+        if self.challenge.name == "rush" and self.time_remaining and amount > 0 then
             local time_bonus = { [1] = 60 * 5, [2] = 60 * 10, [3] = 60 * 15, [4] = 60 * 20 } -- 5s, 10s, 15s, 20s
             self.time_remaining += time_bonus[amount]
         end
@@ -655,7 +655,7 @@ function World:update_score(score_type, amount)
         self.score = self.score + (points[amount] or 0) * self.level
 
         -- Add time bonus for time attack mode
-        if self.time_mode == "countdown" and self.time_remaining and amount > 0 then
+        if self.challenge.name == "rush" and self.time_remaining and amount > 0 then
             local time_bonus = { [1] = 60 * 3, [2] = 60 * 6 } -- 3s, 6s
             self.time_remaining += time_bonus[amount]
         end

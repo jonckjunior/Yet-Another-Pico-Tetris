@@ -62,15 +62,20 @@ CHALLENGES = {
         no_update(),
         no_init()
     ),
-    Challenge:new("quickie", "clear 15 lines in 5 minutes",
+    Challenge:new("quickie", "clear 15 lines in 3 minutes",
         function(world) -- victory
             return world.lines_cleared >= 15 and world.frame_count <= 60 * 60 * 5
         end,
         function(world) -- defeat
             return world.frame_count > 60 * 60 * 5
         end,
-        no_update(),
-        no_init()
+        function(world) -- on_update - countdown timer
+            world.time_remaining -= 1
+        end,
+        function(world)                        -- on_init
+            world.time_remaining = 60 * 60 * 5 -- Start with 5 minutes
+            world.time_mode = "countdown"      -- Flag for UI to display countdown
+        end
     ),
     Challenge:new("reverse", "use 40 pieces without clearing a line",
         function(world) -- victory
@@ -82,7 +87,7 @@ CHALLENGES = {
         no_update(),
         no_init()
     ),
-    Challenge:new("school", "reach level 5",
+    Challenge:new("expert", "reach level 20",
         function(world) -- victory
             return world.level >= 5
         end,
@@ -168,7 +173,7 @@ CHALLENGES = {
             end
         end
     ),
-    Challenge:new("time attack", "clear lines to gain time. survive as long as possible",
+    Challenge:new("rush", "clear lines to gain time. survive as long as possible",
         function(world) -- victory - no win condition, just survive
             return false
         end,
