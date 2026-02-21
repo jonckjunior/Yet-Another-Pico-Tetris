@@ -160,14 +160,15 @@ function World:new(challenge)
     w.particles = {}
     w.drop_trails = {}
 
-    w:refill_queue()
-    w:refill_queue()
-    w:finish_turn()
     w.ui_color = 5
     w.border_color = 1
     w.network = ParticleNetwork:new(40, 24, 1)
     w.frame_count = 0
     w.pieces_used = 0
+
+    w:refill_queue()
+    w:refill_queue()
+    w:finish_turn()
 
     -- w:setup_tspin_test()
 

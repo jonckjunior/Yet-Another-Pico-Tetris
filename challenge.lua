@@ -45,4 +45,7 @@ CHALLENGES = {
     Challenge:new("school", "reach level 5", function(world)
         return world.level >= 5
     end, nil),
+    Challenge:new("heavy g", "survive 2 minutes. blocks fall faster.", function(world)
+        return world.frame_count >= 60 * 60 * 2
+    end, nil),
 }
