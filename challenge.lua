@@ -23,7 +23,7 @@ CHALLENGES = {
     clear_15_lines = Challenge:new("casual", "clear 15 lines", function(world)
         return world.lines_cleared >= 15
     end),
-    reach_level_5 = Challenge:new("t3", "reach level 5", function(world)
+    reach_level_5 = Challenge:new("school", "reach level 5", function(world)
         return world.level >= 5
     end),
 }

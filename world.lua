@@ -93,6 +93,7 @@ end
 ---@field ui_color integer
 ---@field border_color integer
 ---@field network ParticleNetwork
+---@field frame_count integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -164,6 +165,7 @@ function World:new(challenge)
     w.ui_color = 5
     w.border_color = 1
     w.network = ParticleNetwork:new(40, 24, 1)
+    w.frame_count = 0
 
     -- w:setup_tspin_test()
 
@@ -181,6 +183,7 @@ end
 function World:update_world()
     self.network:update()
     if self.state == WORLD_STATE.PLAYING then
+        self.frame_count += 1
         self:handle_input_playing()
         self:handle_auto_drop()
         self:update_particles()
@@ -816,17 +819,14 @@ function World:draw_text_info()
     y_offset += 12
     print_centered("timer", x_offset, 127, y_offset, self.ui_color)
     y_offset += 6
-    print_centered(self.get_time(), x_offset, 127, y_offset, self.ui_color)
+    print_centered(self:get_time(), x_offset, 127, y_offset, self.ui_color)
 end
 
----Returns the time formatted like MM:SS
----@return string
 function World:get_time()
-    local total_seconds = flr(time())
+    local total_seconds = flr(self.frame_count / 60)
     local minutes = flr(total_seconds / 60)
     local seconds = total_seconds % 60
 
-    -- zero pad
     local min_str = (minutes < 10 and "0" or "") .. minutes
     local sec_str = (seconds < 10 and "0" or "") .. seconds
 
