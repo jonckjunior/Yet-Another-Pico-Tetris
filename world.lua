@@ -199,6 +199,10 @@ function World:update_world()
         self:update_drop_trails()
         self:update_victory()
     end
+
+    if self.challenge.is_defeat and self.challenge.is_defeat(self) then
+        self.state = WORLD_STATE.GAME_OVER
+    end
 end
 
 function World:update_victory()
