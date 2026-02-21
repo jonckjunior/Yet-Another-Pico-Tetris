@@ -16,8 +16,9 @@ function _init()
     drk = { [0] = 0, 0, 1, 1, 2, 1, 5, 6, 2, 4, 9, 3, 1, 1, 2, 5 }
     mode = "menu"
     world = nil
+    menu = Menu:new()
     -- music(0)
-    change_mode("playing")
+    -- change_mode("playing")
 end
 
 function _update60()
@@ -25,7 +26,7 @@ function _update60()
         world:update_world()
         update_ui()
     elseif mode == "menu" then
-        update_menu()
+        menu:update_menu()
     end
 
     -- transition:update()
@@ -37,7 +38,7 @@ function _draw()
         world:draw_world()
         draw_ui()
     elseif mode == "menu" then
-        draw_menu()
+        menu:draw_menu()
     end
 
     -- if transition.active then transition:draw() end

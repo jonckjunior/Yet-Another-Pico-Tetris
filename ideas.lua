@@ -30,3 +30,17 @@ function fade_step(percent)
     end
     pal(6, 0, 1)       -- Set display palette
 end
+
+---Draw cursor at given position
+---@param x integer
+---@param y integer
+function Menu:draw_cursor(x, y)
+    local height = 6
+    local width = { 2, 3, 4, 5, 4, 3, 2 }
+    for dy = 0, height do
+        for dx = 0, width[dy + 1] - 1 do
+            local c = (dx == 0 or dx == width[dy + 1] - 1) and 0 or 7
+            pset(x + dx, y + dy, c)
+        end
+    end
+end
