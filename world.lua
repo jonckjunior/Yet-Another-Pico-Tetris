@@ -307,11 +307,11 @@ function World:handle_input_playing()
         self.timer.soft = 0
     end
 
-    -- if the player is holding up and z, we drop
-    if btn(2) and btn(4) then
+    -- if the player presses up, we drop
+    if btn(2) then
         self.timer.hard = max(0, self.timer.hard - 1)
         if self.timer.hard == 0 then
-            self.timer.hard = 10
+            self.timer.hard = 20
             local original_row = self.active_piece.row
 
             -- It starts at 1 because the piece will move down at least 1 row
@@ -325,20 +325,20 @@ function World:handle_input_playing()
             self:update_score("hard_drop", drop_distance)
             self:try_move_piece_down()
         end
-    elseif btnp(4) then
-        -- Clockwise rotation
-        self:handle_rotation(0)
-        self.last_action = "rotation"
     else
         self.timer.hard = 0
     end
 
-    -- if the players is holding up and x, we hold
-    if btn(2) and btn(5) and self.can_hold then
+    -- if the players is holding z and x, we hold
+    if btn(4) and btn(5) and self.can_hold then
         self:handle_hold()
     elseif btnp(5) then
         -- Counterclockwise rotation
         self:handle_rotation(-2)
+        self.last_action = "rotation"
+    elseif btnp(4) then
+        -- Clockwise rotation
+        self:handle_rotation(0)
         self.last_action = "rotation"
     end
 end
