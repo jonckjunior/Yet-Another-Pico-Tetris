@@ -105,6 +105,21 @@ function Menu:draw_diagonal_lines()
     end
 end
 
+---Draw cursor at given position
+---@param x integer
+---@param y integer
+---@param sign integer
+function Menu:draw_cursor(x, y, sign)
+    sign = sign or 1
+    local height = 6
+    local width = { 2, 3, 4, 5, 4, 3, 2 }
+    for dy = 0, height do
+        for dx = 1, width[dy + 1] - 2 do
+            pset(x + dx * sign, y + dy, 7)
+        end
+    end
+end
+
 ---Draw menu items in a box
 ---@param box_x integer
 ---@param box_y integer
@@ -141,6 +156,11 @@ function Menu:draw_menu_items(box_x, box_y, box_w, box_h)
 
         local col = (i == self.selected) and 7 or 5
         print(text, text_x, text_y, col)
+
+        if i == self.selected and i == 2 then
+            self:draw_cursor(text_x + text_w + 1, text_y - 1, 1)
+            self:draw_cursor(text_x - 3, text_y - 1, -1)
+        end
     end
 end
 
@@ -166,7 +186,7 @@ function Menu:draw_menu()
     spr(16, x, y + offset, logo_width, logo_height)
 
     local box_y = 82
-    local box_w = 60
+    local box_w = 70
     local box_h = 37
     local box_x = (127 - box_w) / 2
     self:draw_menu_items(box_x, box_y, box_w, box_h)
