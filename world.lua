@@ -94,6 +94,7 @@ end
 ---@field border_color integer
 ---@field network ParticleNetwork
 ---@field frame_count integer
+---@field pieces_used integer
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -166,6 +167,7 @@ function World:new(challenge)
     w.border_color = 1
     w.network = ParticleNetwork:new(40, 24, 1)
     w.frame_count = 0
+    w.pieces_used = 0
 
     -- w:setup_tspin_test()
 
@@ -652,6 +654,7 @@ function World:lock_active_piece()
     self:check_tspin()
     -- reset hold
     self.can_hold = true
+    self.pieces_used += 1
 end
 
 function World:check_tspin()
@@ -799,8 +802,19 @@ function World:draw_world()
 end
 
 function World:draw_text_info()
-    local y_offset = 127 - 6 * 5
+    local y_offset = 127 - 6 * 11
     local x_offset = 2
+
+    print_centered("pieces", x_offset, self.board_x - 1, y_offset, self.ui_color)
+    y_offset += 6
+    print_centered(tostring(self.pieces_used), x_offset, self.board_x - 1, y_offset, self.ui_color)
+    y_offset += 12
+
+    print_centered("lines", x_offset, self.board_x - 1, y_offset, self.ui_color)
+    y_offset += 6
+    print_centered(tostring(self.lines_cleared), x_offset, self.board_x - 1, y_offset, self.ui_color)
+    y_offset += 12
+
     print_centered("level", x_offset, self.board_x - 1, y_offset, self.ui_color)
     y_offset += 6
     print_centered(tostring(self.level), x_offset, self.board_x - 1, y_offset, self.ui_color)
