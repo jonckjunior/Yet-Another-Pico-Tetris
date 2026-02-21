@@ -191,6 +191,10 @@ function World:update_world()
         self:handle_auto_drop()
         self:update_particles()
         self:update_drop_trails()
+
+        if self.challenge.on_update then
+            self.challenge.on_update(self)
+        end
     elseif self.state == WORLD_STATE.LINE_CLEAR then
         self:update_line_clear_animation()
     elseif self.state == WORLD_STATE.GAME_OVER then
