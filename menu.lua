@@ -162,6 +162,23 @@ function Menu:draw_menu_items(box_x, box_y, box_w, box_h)
             self:draw_cursor(text_x - 3, text_y - 1, -1)
         end
     end
+    self:draw_challenge_description(box_y, box_h)
+end
+
+---Draws the description for the current selected challenge
+---@param box_y integer
+---@param box_h integer
+function Menu:draw_challenge_description(box_y, box_h)
+    local description = self:current_challenge().label
+    local lines = split(description)
+
+    -- Draw each line centered
+    local y = box_y + box_h + 5
+    for line in all(lines) do
+        local line_w = #line * 4
+        print(line, (127 - line_w) / 2, y, 5)
+        y += 6 -- Move down for next line
+    end
 end
 
 ---Draw the complete menu
@@ -171,7 +188,7 @@ function Menu:draw_menu()
     local logo_height = 38
 
     local x = (127 - logo_width) / 2
-    local y = (127 - logo_height) / 2 - 20
+    local y = (127 - logo_height) / 2 - 30
     local t = time()
     local offset = sin(t * 0.5) * 2 -- speed * amplitude
 
@@ -185,7 +202,7 @@ function Menu:draw_menu()
     pal(0)
     spr(16, x, y + offset, logo_width, logo_height)
 
-    local box_y = 82
+    local box_y = 72
     local box_w = 70
     local box_h = 37
     local box_x = (127 - box_w) / 2

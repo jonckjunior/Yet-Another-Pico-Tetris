@@ -77,7 +77,7 @@ CHALLENGES = {
             world.time_mode = "countdown"      -- Flag for UI to display countdown
         end
     ),
-    Challenge:new("reverse", "use 40 pieces without clearing a line",
+    Challenge:new("reverse", "use 40 pieces without, clearing a line",
         function(world) -- victory
             return world.pieces_used == 40 and world.lines_cleared == 0
         end,
@@ -95,7 +95,7 @@ CHALLENGES = {
         no_update(),
         no_init()
     ),
-    Challenge:new("heavy g", "survive 2 minutes. blocks fall faster.",
+    Challenge:new("heavy g", "survive 2 minutes,blocks fall faster",
         function(world)
             return world.frame_count >= 60 * 60 * 2
         end,
@@ -106,7 +106,7 @@ CHALLENGES = {
         end,
         no_init()
     ),
-    Challenge:new("perfect", "get a perfect clear (no pieces after clearing lines)",
+    Challenge:new("perfect", "get a perfect clear,no pieces after clearing lines",
         function(world) -- victory
             local row = #world.grid
             for column = 1, #world.grid[1] do
@@ -120,7 +120,7 @@ CHALLENGES = {
         no_update(),
         no_init()
     ),
-    Challenge:new("tight", "you only have 6 columns. clear 15 lines",
+    Challenge:new("tight", "you only have 6 columns,clear 15 lines",
         function(world) -- victory
             return world.lines_cleared >= 15
         end,
@@ -147,7 +147,7 @@ CHALLENGES = {
             end
         end
     ),
-    Challenge:new("garbage", "clear the bottom row filled with garbage",
+    Challenge:new("garbage", "clear the bottom row, lines are filled with garbage",
         function(world) -- victory
             return world.cleared_bottom_row
         end,
@@ -173,7 +173,7 @@ CHALLENGES = {
             end
         end
     ),
-    Challenge:new("rush", "clear lines to gain time. survive as long as possible",
+    Challenge:new("rush", "clear lines to gain time,survive as long as possible",
         function(world) -- victory - no win condition, just survive
             return false
         end,
