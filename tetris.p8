@@ -48,7 +48,7 @@ end
 function change_mode(new_mode)
     pal()
     if new_mode == "playing" then
-        world = World:new(CHALLENGES.clear_15_lines)
+        world = World:new(menu:current_challenge())
     end
     mode = new_mode
 end

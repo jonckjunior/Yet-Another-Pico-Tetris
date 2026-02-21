@@ -1,6 +1,7 @@
 ---@class Menu
 ---@field items table
 ---@field selected integer
+---@field selected_challenge integer
 ---@field dark_map table
 local Menu = {}
 
@@ -11,11 +12,12 @@ function Menu:new()
 
     m.items = {
         "start",
-        "mode: classic",
+        "mode",
         "options"
     }
 
     m.selected = 1
+    m.selected_challenge = 1
 
     m.dark_map = {
         [7] = 6,
@@ -31,10 +33,23 @@ function Menu:new()
     return m
 end
 
+---Returns the currently selected Challenge object
+function Menu:current_challenge()
+    return CHALLENGES[self.selected_challenge]
+end
+
 ---Update menu state and handle input
 function Menu:update_menu()
     if btnp(2) then self.selected -= 1 end -- up
     if btnp(3) then self.selected += 1 end -- down
+
+    if self.selected == 2 then
+        if btnp(1) then
+            self.selected_challenge = (self.selected_challenge % #CHALLENGES) + 1
+        elseif btnp(0) then
+            self.selected_challenge = ((self.selected_challenge - 2) % #CHALLENGES) + 1
+        end
+    end
 
     self.selected = mid(1, self.selected, #self.items)
 
@@ -42,7 +57,7 @@ function Menu:update_menu()
         if self.selected == 1 then
             change_mode("playing")
         elseif self.selected == 2 then
-            -- cycle mode
+            -- cycle through challenges
         elseif self.selected == 3 then
             -- change_mode("options")
         end
@@ -114,8 +129,12 @@ function Menu:draw_menu_items(box_x, box_y, box_w, box_h)
             )
         end
 
-        -- center text inside its slice
+        -- build display text (mode item shows current challenge label)
         local text = self.items[i]
+        if i == 2 then
+            text = "mode: " .. self:current_challenge().name
+        end
+
         local text_w = #text * 4
         local text_x = box_x + (box_w - text_w) / 2
         local text_y = slice_y + (item_h - 6) / 2 + 1 -- 6px font height
