@@ -95,6 +95,7 @@ end
 ---@field network ParticleNetwork
 ---@field frame_count integer
 ---@field pieces_used integer
+---@field cleared_bottom_row boolean
 local World = {}
 
 ---Initialize a new world. Sets up the grid and creates the first active piece.
@@ -165,6 +166,7 @@ function World:new(challenge)
     w.network = ParticleNetwork:new(40, 24, 1)
     w.frame_count = 0
     w.pieces_used = 0
+    w.cleared_bottom_row = false
 
     w:refill_queue()
     w:refill_queue()
@@ -535,6 +537,14 @@ function World:clear_completed_lines()
     local write_row = rows
 
     self:create_particles_for_line_clear()
+
+    -- Check if bottom row was cleared (for garbage challenge)
+    for _, cleared_row in ipairs(self.animation.lines) do
+        if cleared_row == rows then
+            self.cleared_bottom_row = true
+            break
+        end
+    end
 
     -- Use the stored line numbers from animation
     for read_row = rows, 1, -1 do

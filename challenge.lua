@@ -142,4 +142,30 @@ CHALLENGES = {
             end
         end
     ),
+    Challenge:new("garbage", "clear the bottom row filled with garbage",
+        function(world) -- victory
+            return world.cleared_bottom_row
+        end,
+        no_defeat(),
+        no_update(),
+        function(world) -- on_init logic
+            -- Fill bottom 10 rows with garbage, leaving one random hole per row
+            local rows = #world.grid
+            local columns = #world.grid[1]
+
+            local prev_hole = -1
+            for row = rows - 9, rows do                   -- Last 10 rows (13-22)
+                local hole_column = flr(rnd(columns)) + 1 -- Random column 1-10
+                while hole_column == prev_hole do
+                    hole_column = flr(rnd(columns)) + 1
+                end
+                for column = 1, columns do
+                    if column ~= hole_column then
+                        world.grid[row][column] = flr(rnd(7)) + 1 -- Random piece color
+                    end
+                end
+                prev_hole = hole_column
+            end
+        end
+    ),
 }
