@@ -100,11 +100,11 @@ CHALLENGES = {
             return world.frame_count >= 60 * 60 * 2
         end,
         no_defeat(),
+        no_update(),
         function(world)
             world.drop_interval_max = 5
             world.drop_interval = 5
-        end,
-        no_init()
+        end
     ),
     Challenge:new("perfect", "get a perfect clear,no pieces after clearing lines",
         function(world) -- victory
