@@ -778,7 +778,7 @@ function World:draw_world()
     self:draw_drop_trails()
     self:draw_active_piece()
     self:draw_border()
-    self:draw_score_and_level()
+    self:draw_text_info()
     self:draw_particles()
 
     if self.state == WORLD_STATE.LINE_CLEAR then
@@ -795,7 +795,7 @@ function World:draw_world()
     camera(0, 0)
 end
 
-function World:draw_score_and_level()
+function World:draw_text_info()
     local y_offset = 127 - 6 * 5
     local x_offset = 2
     print_centered("level", x_offset, self.board_x - 1, y_offset, self.ui_color)
@@ -806,6 +806,31 @@ function World:draw_score_and_level()
     print_centered("score", x_offset, self.board_x - 1, y_offset, self.ui_color)
     y_offset += 6
     print_centered(tostring(self.score), x_offset, self.board_x - 1, y_offset, self.ui_color)
+
+    y_offset = 127 - 6 * 5
+    x_offset = self.board_x + self.block_size * #self.grid[1] + 2
+    print_centered("mode", x_offset, 127, y_offset, self.ui_color)
+    y_offset += 6
+    print_centered(tostring(self.challenge.name), x_offset, 127, y_offset, self.ui_color)
+
+    y_offset += 12
+    print_centered("timer", x_offset, 127, y_offset, self.ui_color)
+    y_offset += 6
+    print_centered(self.get_time(), x_offset, 127, y_offset, self.ui_color)
+end
+
+---Returns the time formatted like MM:SS
+---@return string
+function World:get_time()
+    local total_seconds = flr(time())
+    local minutes = flr(total_seconds / 60)
+    local seconds = total_seconds % 60
+
+    -- zero pad
+    local min_str = (minutes < 10 and "0" or "") .. minutes
+    local sec_str = (seconds < 10 and "0" or "") .. seconds
+
+    return min_str .. ":" .. sec_str
 end
 
 function print_centered(text, x_start, x_end, y, col)

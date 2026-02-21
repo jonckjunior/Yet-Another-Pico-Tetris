@@ -17,7 +17,7 @@ function _init()
     mode = "menu"
     world = nil
     -- music(0)
-    -- change_mode("playing")
+    change_mode("playing")
 end
 
 function _update60()
