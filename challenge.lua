@@ -120,9 +120,8 @@ CHALLENGES = {
         no_update(),
         no_init()
     ),
-    Challenge:new("tight", "you only have 6 columns,clear 15 lines",
-        function(world) -- victory
-            return world.lines_cleared >= 15
+    Challenge:new("tight", "you only have 6 columns",
+        function(world)
         end,
         no_defeat(),
         function(world) -- on update
