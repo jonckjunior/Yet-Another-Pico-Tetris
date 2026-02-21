@@ -168,4 +168,19 @@ CHALLENGES = {
             end
         end
     ),
+    Challenge:new("time attack", "clear lines to gain time. survive as long as possible",
+        function(world) -- victory - no win condition, just survive
+            return false
+        end,
+        function(world) -- defeat - run out of time
+            return world.time_remaining <= 0
+        end,
+        function(world) -- on_update - countdown timer
+            world.time_remaining -= 1
+        end,
+        function(world)                    -- on_init
+            world.time_remaining = 60 * 15 -- Start with 15 seconds
+            world.time_mode = "countdown"  -- Flag for UI to display countdown
+        end
+    ),
 }

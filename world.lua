@@ -167,6 +167,8 @@ function World:new(challenge)
     w.frame_count = 0
     w.pieces_used = 0
     w.cleared_bottom_row = false
+    w.time_remaining = nil
+    w.time_mode = "countup" -- or "countdown" for time attack
 
     w:refill_queue()
     w:refill_queue()
@@ -627,18 +629,36 @@ function World:update_score(score_type, amount)
         self.level = flr(self.lines_cleared / 10) + 1
         self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
         self.score = self.score + points[amount] * self.level
+
+        -- Add time bonus for time attack mode
+        if self.time_mode == "countdown" and self.time_remaining then
+            local time_bonus = { [1] = 60 * 3, [2] = 60 * 5, [3] = 60 * 8, [4] = 60 * 12 } -- 3s, 5s, 8s, 12s
+            self.time_remaining += time_bonus[amount]
+        end
     elseif score_type == "tspin" then
         local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
         self.lines_cleared = self.lines_cleared + amount
         self.level = flr(self.lines_cleared / 10) + 1
         self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
         self.score = self.score + (points[amount] or 0) * self.level
+
+        -- Add time bonus for time attack mode (bonus for t-spins!)
+        if self.time_mode == "countdown" and self.time_remaining and amount > 0 then
+            local time_bonus = { [1] = 60 * 5, [2] = 60 * 10, [3] = 60 * 15, [4] = 60 * 20 } -- 5s, 10s, 15s, 20s
+            self.time_remaining += time_bonus[amount]
+        end
     elseif score_type == "mini_tspin" then
         local points = { [0] = 100, [1] = 200, [2] = 400 }
         self.lines_cleared = self.lines_cleared + amount
         self.level = flr(self.lines_cleared / 10) + 1
         self.drop_interval = max(10, self.drop_interval_max - (self.level - 1))
         self.score = self.score + (points[amount] or 0) * self.level
+
+        -- Add time bonus for time attack mode
+        if self.time_mode == "countdown" and self.time_remaining and amount > 0 then
+            local time_bonus = { [1] = 60 * 3, [2] = 60 * 6 } -- 3s, 6s
+            self.time_remaining += time_bonus[amount]
+        end
     elseif score_type == "soft_drop" then
         self.score = self.score + amount
     elseif score_type == "hard_drop" then
@@ -867,6 +887,9 @@ end
 
 function World:get_time()
     local total_seconds = flr(self.frame_count / 60)
+    if self.time_mode == "countdown" then
+        total_seconds = flr(self.time_remaining / 60)
+    end
     local minutes = flr(total_seconds / 60)
     local seconds = total_seconds % 60
 
