@@ -301,7 +301,7 @@ function World:handle_input_playing()
             self.active_piece.column += dir.delta
             self.last_action = "movement"
             if stat(46 + 3) == -1 then
-                sfx(47, 3)
+                sfx(7, 3)
             end
         end
 
@@ -316,7 +316,7 @@ function World:handle_input_playing()
                     self.last_action = "movement"
 
                     if stat(46 + 3) == -1 then
-                        sfx(47, 3)
+                        sfx(7, 3)
                     end
                 end
             end
@@ -350,7 +350,7 @@ function World:handle_input_playing()
                 self.active_piece.row = self.active_piece.row + 1
                 drop_distance = drop_distance + 1
             end
-            sfx(46)
+            sfx(6)
             self:create_drop_trails(original_row)
             self:update_score("hard_drop", drop_distance)
             self:try_move_piece_down()
@@ -366,12 +366,12 @@ function World:handle_input_playing()
         -- Counterclockwise rotation
         self:handle_rotation(-2)
         self.last_action = "rotation"
-        sfx(45)
+        sfx(5)
     elseif btnp(4) then
         -- Clockwise rotation
         self:handle_rotation(0)
         self.last_action = "rotation"
-        sfx(45)
+        sfx(5)
     end
 end
 
@@ -483,7 +483,7 @@ end
 ---@param completed_rows table
 ---@param score_type string
 function World:prepare_line_completion_animation(completed_rows, score_type)
-    sfx(44)
+    sfx(4)
     self.animation.type = score_type
     self.animation.timer = 0
     self.animation.lines = completed_rows
