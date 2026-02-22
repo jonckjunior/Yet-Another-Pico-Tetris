@@ -40,13 +40,22 @@ end
 
 ---Update menu state and handle input
 function Menu:update_menu()
-    if btnp(2) then self.selected -= 1 end -- up
-    if btnp(3) then self.selected += 1 end -- down
+    if btnp(2) then -- up
+        self.selected -= 1
+        -- print("\asfcdefg \asfefgab")
+        sfx(41)
+    end
+    if btnp(3) then -- down
+        self.selected += 1
+        sfx(40)
+    end
 
     if self.selected == 2 then
         if btnp(1) then
+            sfx(41)
             self.selected_challenge = (self.selected_challenge % #CHALLENGES) + 1
         elseif btnp(0) then
+            sfx(40)
             self.selected_challenge = ((self.selected_challenge - 2) % #CHALLENGES) + 1
         end
     end
@@ -55,6 +64,7 @@ function Menu:update_menu()
 
     if btnp(5) or btnp(4) then
         if self.selected == 1 then
+            sfx(42)
             change_mode("playing")
         elseif self.selected == 2 then
             -- cycle through challenges
