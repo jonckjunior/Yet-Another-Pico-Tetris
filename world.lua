@@ -300,6 +300,9 @@ function World:handle_input_playing()
         if btnp(dir.btn) and self:can_move(0, dir.delta) then
             self.active_piece.column += dir.delta
             self.last_action = "movement"
+            if stat(46 + 3) == -1 then
+                sfx(47, 3)
+            end
         end
 
         if btn(dir.btn) then
@@ -311,6 +314,10 @@ function World:handle_input_playing()
                 if self:can_move(0, dir.delta) then
                     self.active_piece.column += dir.delta
                     self.last_action = "movement"
+
+                    if stat(46 + 3) == -1 then
+                        sfx(47, 3)
+                    end
                 end
             end
         else
