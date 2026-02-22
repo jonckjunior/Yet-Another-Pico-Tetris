@@ -180,7 +180,7 @@ function World:new(challenge)
 
     -- w:setup_tspin_test()
 
-    music(0)
+    music(0, 0, 4)
 
     return w
 end
@@ -352,7 +352,7 @@ function World:handle_input_playing()
                 self.active_piece.row = self.active_piece.row + 1
                 drop_distance = drop_distance + 1
             end
-            sfx(6)
+            sfx(6, 3)
             self:create_drop_trails(original_row)
             self:update_score("hard_drop", drop_distance)
             self:try_move_piece_down()
@@ -368,12 +368,12 @@ function World:handle_input_playing()
         -- Counterclockwise rotation
         self:handle_rotation(-2)
         self.last_action = "rotation"
-        sfx(5)
+        sfx(5, 3)
     elseif btnp(4) then
         -- Clockwise rotation
         self:handle_rotation(0)
         self.last_action = "rotation"
-        sfx(5)
+        sfx(5, 3)
     end
 end
 
@@ -485,7 +485,7 @@ end
 ---@param completed_rows table
 ---@param score_type string
 function World:prepare_line_completion_animation(completed_rows, score_type)
-    sfx(4)
+    sfx(4, 3)
     self.animation.type = score_type
     self.animation.timer = 0
     self.animation.lines = completed_rows
