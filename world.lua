@@ -639,44 +639,31 @@ end
 function World:update_score(score_type, amount)
     if score_type == "lines" then
         local points = { [1] = 100, [2] = 300, [3] = 500, [4] = 800 }
-        self.lines_cleared = self.lines_cleared + amount
-        self.level = flr(self.lines_cleared / 10) + 1
-        self.drop_interval = max(5, self.drop_interval_max - (self.level - 1))
-        self.score = self.score + points[amount] * self.level
-
-        -- Add time bonus for time attack mode
-        if self.challenge.name == "rush" and self.time_remaining then
-            local time_bonus = { [1] = 60 * 3, [2] = 60 * 5, [3] = 60 * 8, [4] = 60 * 12 } -- 3s, 5s, 8s, 12s
-            self.time_remaining += time_bonus[amount]
-        end
+        local time_bonus = { [1] = 60 * 3, [2] = 60 * 5, [3] = 60 * 8, [4] = 60 * 12 } -- 3s, 5s, 8s, 12s
+        self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "tspin" then
         local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
-        self.lines_cleared = self.lines_cleared + amount
-        self.level = flr(self.lines_cleared / 10) + 1
-        self.drop_interval = max(5, self.drop_interval_max - (self.level - 1))
-        self.score = self.score + (points[amount] or 0) * self.level
-
-        -- Add time bonus for time attack mode (bonus for t-spins!)
-        if self.challenge.name == "rush" and self.time_remaining and amount > 0 then
-            local time_bonus = { [1] = 60 * 5, [2] = 60 * 10, [3] = 60 * 15, [4] = 60 * 20 } -- 5s, 10s, 15s, 20s
-            self.time_remaining += time_bonus[amount]
-        end
+        local time_bonus = { [1] = 60 * 5, [2] = 60 * 10, [3] = 60 * 15, [4] = 60 * 20 } -- 5s, 10s, 15s, 20s
+        self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "mini_tspin" then
         local points = { [0] = 100, [1] = 200, [2] = 400 }
-        self.lines_cleared = self.lines_cleared + amount
-        self.level = flr(self.lines_cleared / 10) + 1
-        self.drop_interval = max(5, self.drop_interval_max - (self.level - 1))
-        self.score = self.score + (points[amount] or 0) * self.level
-
-        -- Add time bonus for time attack mode
-        if self.challenge.name == "rush" and self.time_remaining and amount > 0 then
-            local time_bonus = { [1] = 60 * 3, [2] = 60 * 6 } -- 3s, 6s
-            self.time_remaining += time_bonus[amount]
-        end
+        local time_bonus = { [1] = 60 * 3, [2] = 60 * 6 } -- 3s, 6s
+        self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "soft_drop" then
         self.score = self.score + amount
     elseif score_type == "hard_drop" then
         self.score = self.score + amount * 2
+    end
+end
+
+function World:update_score_line_clear(points, time_bonus, amount)
+    self.lines_cleared = self.lines_cleared + amount
+    self.level = flr(self.lines_cleared / 10) + 1
+    self.drop_interval = max(5, self.drop_interval_max - (self.level * 2 - 2))
+    self.score = self.score + points[amount] * self.level
+
+    if self.challenge.name == "rush" and self.time_remaining and amount > 0 then
+        self.time_remaining += time_bonus[amount]
     end
 end
 
