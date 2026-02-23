@@ -28,6 +28,10 @@ function Menu:new()
         [13] = 1
     }
 
+    -- flash state: counts down after pressing start
+    m.flash_timer = 0
+    m.flash_total = 8
+
     self.__index = self
     setmetatable(m, self)
     return m
@@ -41,6 +45,15 @@ end
 ---Update menu state and handle input
 function Menu:update_menu()
     if transition:blocks_input() then
+        return
+    end
+
+    -- tick the flash timer; fire transition once it expires
+    if self.flash_timer > 0 then
+        self.flash_timer -= 1
+        if self.flash_timer == 0 then
+            transition:start("menu", "playing")
+        end
         return
     end
 
@@ -68,8 +81,8 @@ function Menu:update_menu()
 
     if btnp(5) or btnp(4) then
         if self.selected == 1 then
-            sfx(2)
-            transition:start("menu", "playing")
+            print("\a2s4i0v3c3e3g3c4 ")
+            self.flash_timer = self.flash_total
         elseif self.selected == 2 then
             -- cycle through challenges
         elseif self.selected == 3 then
@@ -168,7 +181,13 @@ function Menu:draw_menu_items(box_x, box_y, box_w, box_h)
         local text_x = box_x + (box_w - text_w) / 2
         local text_y = slice_y + (item_h - 6) / 2 + 1 -- 6px font height
 
-        local col = (i == self.selected) and 7 or 5
+        local col
+        if i == self.selected and self.flash_timer > 0 then
+            -- alternate between 7 and 5 each frame
+            col = (self.flash_timer % 4 == 0) and 7 or 5
+        else
+            col = (i == self.selected) and 7 or 5
+        end
         print(text, text_x, text_y, col)
 
         if i == self.selected and i == 2 then
