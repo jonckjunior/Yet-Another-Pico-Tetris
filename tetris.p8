@@ -8,6 +8,7 @@ __lua__
 #include setup.lua
 #include ui.lua
 #include menu.lua
+#include transition.lua
 
 function _init()
     -- enables hidden colors
@@ -17,6 +18,7 @@ function _init()
     mode = "menu"
     world = nil
     menu = Menu:new()
+    transition = Transition:new()
     -- music(12)
     -- change_mode("playing")
 end
@@ -29,7 +31,7 @@ function _update60()
         menu:update_menu()
     end
 
-    -- transition:update()
+    transition:update()
 end
 
 function _draw()
@@ -41,7 +43,7 @@ function _draw()
         menu:draw_menu()
     end
 
-    -- if transition.active then transition:draw() end
+    if transition.active then transition:draw() end
     print_debug()
 end
 

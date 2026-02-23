@@ -180,10 +180,6 @@ function World:new(challenge)
         w.challenge.on_init(w)
     end
 
-    -- w:setup_tspin_test()
-
-    -- music(21, 0, 4)
-
     return w
 end
 
@@ -196,6 +192,10 @@ end
 
 ---Main gameplay loop for the world.
 function World:update_world()
+    if transition:blocks_input() then
+        return
+    end
+
     self.network:update()
     if self.state == WORLD_STATE.PLAYING then
         self.frame_count += 1

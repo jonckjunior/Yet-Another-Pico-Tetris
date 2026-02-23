@@ -40,6 +40,10 @@ end
 
 ---Update menu state and handle input
 function Menu:update_menu()
+    if transition:blocks_input() then
+        return
+    end
+
     if btnp(2) then -- up
         self.selected -= 1
         -- print("\asfcdefg \asfefgab")
@@ -65,7 +69,7 @@ function Menu:update_menu()
     if btnp(5) or btnp(4) then
         if self.selected == 1 then
             sfx(2)
-            change_mode("playing")
+            transition:start("menu", "playing")
         elseif self.selected == 2 then
             -- cycle through challenges
         elseif self.selected == 3 then
