@@ -84,7 +84,8 @@ end
 ---@field spawn_column integer
 ---@field spawn_rotation integer
 ---@field animation table
----@field shake integer
+---@field shake_x integer
+---@field shake_x integer
 ---@field preview integer
 ---@field challenge Challenge
 ---@field particles table
@@ -155,7 +156,8 @@ function World:new(challenge)
         lines = {},   -- Array of line numbers being cleared
         duration = 12 -- Animation length in frames
     }
-    w.shake = 0
+    w.shake_x = 0
+    w.shake_y = 0
     w.preview = 5
     w.challenge = challenge
     w.particles = {}
@@ -354,6 +356,7 @@ function World:handle_input_playing()
                 drop_distance = drop_distance + 1
             end
             sfx(6, 3)
+            self.shake_y += 3
             self:create_drop_trails(original_row)
             self:update_score("hard_drop", drop_distance)
             self:try_move_piece_down()
@@ -487,12 +490,13 @@ end
 ---@param completed_rows table
 ---@param score_type string
 function World:prepare_line_completion_animation(completed_rows, score_type)
-    sfx(4, 3)
+    sfx(4, 1)
     self.animation.type = score_type
     self.animation.timer = 0
     self.animation.lines = completed_rows
     self.animation.lines_count = #completed_rows
-    self.shake = 1 + #completed_rows
+    self.shake_x += 1 + #completed_rows
+    self.shake_y += 1 + #completed_rows
 end
 
 function World:finish_turn()
@@ -815,15 +819,15 @@ end
 
 ---Draw everything in the world
 function World:draw_world()
-    if self.shake > 0 then
-        local dx = rnd(self.shake) - self.shake / 2
-        local dy = rnd(self.shake) - self.shake / 2
+    if self.shake_x + self.shake_y > 0 then
+        local dx = rnd(self.shake_x) - self.shake_x / 2
+        local dy = rnd(self.shake_y) - self.shake_y / 2
         camera(dx, dy)
         -- Decay the shake value
-        self.shake = self.shake * 0.3
-        if self.shake < 0.1 then self.shake = 0 end
-    else
-        camera(0, 0)
+        self.shake_x = self.shake_x * 0.3
+        self.shake_y = self.shake_y * 0.3
+        if self.shake_x < 0.1 then self.shake_x = 0 end
+        if self.shake_y < 0.1 then self.shake_y = 0 end
     end
     -- self.network:draw()
     self:draw_diagonal_lines()
