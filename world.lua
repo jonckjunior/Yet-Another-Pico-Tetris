@@ -180,7 +180,7 @@ function World:new(challenge)
 
     -- w:setup_tspin_test()
 
-    music(21, 0, 4)
+    -- music(21, 0, 4)
 
     return w
 end

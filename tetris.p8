@@ -17,7 +17,7 @@ function _init()
     mode = "menu"
     world = nil
     menu = Menu:new()
-    music(12)
+    -- music(12)
     -- change_mode("playing")
 end
 
