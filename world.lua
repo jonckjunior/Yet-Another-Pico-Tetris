@@ -334,6 +334,7 @@ function World:handle_input_playing()
             self.timer.soft = 3
             self:update_score("soft_drop", 1)
             self:try_move_piece_down()
+            sfx(63, 3)
         end
     else
         self.timer.soft = 0
@@ -364,6 +365,7 @@ function World:handle_input_playing()
     -- if the players is holding z and x, we hold
     if btn(4) and btn(5) and self.can_hold then
         self:handle_hold()
+        sfx(62, 3)
     elseif btnp(5) then
         -- Counterclockwise rotation
         self:handle_rotation(-2)
