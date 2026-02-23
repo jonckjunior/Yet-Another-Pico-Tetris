@@ -64,16 +64,16 @@ CHALLENGES = {
     ),
     Challenge:new("quickie", "clear 15 lines in 3 minutes",
         function(world) -- victory
-            return world.lines_cleared >= 15 and world.frame_count <= 60 * 60 * 5
+            return world.lines_cleared >= 15 and world.frame_count <= 60 * 60 * 3
         end,
         function(world) -- defeat
-            return world.frame_count > 60 * 60 * 5
+            return world.frame_count > 60 * 60 * 3
         end,
         function(world) -- on_update - countdown timer
             world.time_remaining -= 1
         end,
         function(world)                        -- on_init
-            world.time_remaining = 60 * 60 * 5 -- Start with 5 minutes
+            world.time_remaining = 60 * 60 * 3 -- Start with 3 minutes
             world.time_mode = "countdown"      -- Flag for UI to display countdown
         end
     ),
