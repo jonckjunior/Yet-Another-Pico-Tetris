@@ -32,7 +32,7 @@ function Transition:new()
     t.active      = false
     t.target_mode = nil
     t.timer       = 0
-    t.duration    = 60
+    t.duration    = 30
     t.phase       = "idle"
     setmetatable(t, self)
     return t
@@ -42,8 +42,7 @@ end
 ---@param from_mode string
 ---@param target_mode string
 function Transition:start(from_mode, target_mode)
-    --- let's fade out music too
-    music(-1, 1000)
+    music(-1, 1000 * self.duration / 60)
     self.active      = true
     self.from_mode   = from_mode
     self.target_mode = target_mode
@@ -68,7 +67,7 @@ function Transition:update()
         self.timer = 0
 
         if self.target_mode == "playing" then
-            -- music(21, 1000, 4)
+            -- music(21, 1000 * self.duration / 60, 4)
         end
     elseif self.phase == "fade_in" and self.timer >= self.duration then
         -- fade complete
