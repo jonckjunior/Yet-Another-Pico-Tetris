@@ -255,13 +255,7 @@ function World:update_end_anim()
     local filled = self:end_anim_count_filled()
 
     if filled > 0 then
-        if is_defeat then
-            -- Defeat: slower ramp, starts at 10 frames between pops, floors at 4
-            ea.pop_interval = max(4, 10 - flr((1 - filled / 220) * 6))
-        else
-            -- Victory: snappier ramp, starts at 6, floors at 2
-            ea.pop_interval = max(2, 6 - flr((1 - filled / 220) * 4))
-        end
+        ea.pop_interval = max(2, 6 - flr((1 - filled / 220) * 4))
         ea.pop_timer += 1
         if ea.pop_timer >= ea.pop_interval then
             ea.pop_timer = 0
@@ -280,7 +274,7 @@ end
 ---@return integer
 function World:end_anim_count_filled()
     local count = 0
-    for row = 3, #self.grid do
+    for row = 2, #self.grid do
         for col = 1, #self.grid[row] do
             if self.grid[row][col] ~= self.grid_spr then
                 count += 1
@@ -293,7 +287,7 @@ end
 ---Pick a random filled cell, register a pop, and erase it from the grid
 function World:end_anim_pop_random_block()
     local filled = {}
-    for row = 3, #self.grid do
+    for row = 2, #self.grid do
         for col = 1, #self.grid[row] do
             if self.grid[row][col] ~= self.grid_spr then
                 add(filled, { row = row, col = col, spr = self.grid[row][col] })
@@ -308,10 +302,15 @@ function World:end_anim_pop_random_block()
 
     -- Defeat pops are slower (duration 20) and flash dark; victory pops are crisp (duration 12)
     local is_defeat                   = (self.end_anim.mode == "defeat")
-    local duration                    = is_defeat and 20 or 12
+    local duration                    = 12
     local flash_col                   = is_defeat and 1 or 7 -- dark blue flash vs white flash
 
     self.grid[chosen.row][chosen.col] = self.grid_spr
+    if self.end_anim.mode == "victory" then
+        self.shake_x = 3
+        self.shake_y = 3
+    end
+
 
     add(self.end_anim.pops, {
         row       = chosen.row,
