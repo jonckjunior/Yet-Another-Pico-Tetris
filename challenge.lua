@@ -48,7 +48,7 @@ end
 CHALLENGES = {
     Challenge:new("casual", "clear 15 lines",
         function(world) -- victory
-            return world.lines_cleared >= 15
+            return world.pieces_used == 2
         end,
         no_defeat(),
         no_update(),

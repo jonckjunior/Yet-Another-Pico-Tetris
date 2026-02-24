@@ -140,7 +140,8 @@ function World:new(challenge)
     w.timer = {
         soft = 0,
         drop = 0,
-        hard = 0
+        hard = 0,
+        victory_banner = 0,
     }
     w.is_tspin = false
     w.is_mini_tspin = false
@@ -929,8 +930,24 @@ function World:draw_victory()
     palt(0, true)
 
     if self.victory_anim.done then
-        print("\f7\^o0ffvictory!", 45, 50)
-        print("press \142 to continue", 20, 60)
+        self.timer.victory_banner += 1
+        draw_victory_banner(self.timer.victory_banner)
+    end
+end
+
+function draw_victory_banner(t)
+    local h = min(16, t)
+
+    -- after 60 frames, expand fully
+    if t > 60 then
+        h = min(64, 16 + (t - 60))
+    end
+
+    rectfill(0, 0, 127, h, 0)
+    rectfill(0, 127 - h, 127, 127, 0)
+
+    if t > 10 then
+        print("victory!", 48, 60, 7)
     end
 end
 
