@@ -170,11 +170,12 @@ function World:new(challenge)
     w.pieces_used = 0
     w.cleared_bottom_row = false
 
-    -- Victory animation state
-    w.victory_anim = {
+    -- Shared end-state animation (victory and defeat both use this)
+    w.end_anim = {
+        mode         = nil,  -- "victory" or "defeat", set when the state changes
         pops         = {},   -- active pop animations: {row, col, timer, duration, color}
         pop_timer    = 0,    -- counts up; triggers a new pop every pop_interval frames
-        pop_interval = 6,    -- frames between pops (speeds up as board empties)
+        pop_interval = 6,    -- current interval (recalculated each frame)
         done         = false -- all blocks cleared and last pop finished
     }
     w.time_remaining = nil
@@ -218,59 +219,66 @@ function World:update_world()
     elseif self.state == WORLD_STATE.LINE_CLEAR then
         self:update_line_clear_animation()
     elseif self.state == WORLD_STATE.GAME_OVER then
-        self:update_game_over()
+        self:update_particles()
+        self:update_drop_trails()
+        self:update_end_anim()
     elseif self.state == WORLD_STATE.VICTORY then
         self:update_particles()
         self:update_drop_trails()
-        self:update_victory()
+        self:update_end_anim()
     end
 
     if self.challenge.is_defeat and self.challenge.is_defeat(self) then
         self.state = WORLD_STATE.GAME_OVER
+        self.end_anim.mode = "defeat"
     end
 end
 
-function World:update_victory()
-    local va = self.victory_anim
+---Shared update for both VICTORY and GAME_OVER end-state animations
+function World:update_end_anim()
+    local ea = self.end_anim
+    local is_defeat = (ea.mode == "defeat")
 
     -- Advance each active pop
     local still_popping = {}
-    for _, pop in ipairs(va.pops) do
+    for _, pop in ipairs(ea.pops) do
         pop.timer += 1
         if pop.timer == pop.duration then
-            -- Pop finished — spawn particles
-            self:spawn_victory_particles(pop)
+            self:spawn_end_particles(pop)
         end
         if pop.timer < pop.duration then
             add(still_popping, pop)
         end
     end
-    va.pops = still_popping
+    ea.pops = still_popping
 
-    -- Count remaining filled cells (rows 3-22 to stay below the hidden rows)
-    local filled = self:victory_count_filled()
+    local filled = self:end_anim_count_filled()
 
     if filled > 0 then
-        -- Ramp up pop rate as the board empties: fewer blocks = faster pops
-        va.pop_interval = max(2, 6 - flr((1 - filled / 220) * 4))
-        va.pop_timer += 1
-        if va.pop_timer >= va.pop_interval then
-            va.pop_timer = 0
-            self:victory_pop_random_block()
+        if is_defeat then
+            -- Defeat: slower ramp, starts at 10 frames between pops, floors at 4
+            ea.pop_interval = max(4, 10 - flr((1 - filled / 220) * 6))
+        else
+            -- Victory: snappier ramp, starts at 6, floors at 2
+            ea.pop_interval = max(2, 6 - flr((1 - filled / 220) * 4))
         end
-    elseif #va.pops == 0 then
-        -- Board clear and all animations done
-        va.done = true
+        ea.pop_timer += 1
+        if ea.pop_timer >= ea.pop_interval then
+            ea.pop_timer = 0
+            self:end_anim_pop_random_block()
+        end
+    elseif #ea.pops == 0 then
+        ea.done = true
     end
 
-    if va.done and btnp(5) then
+    if ea.done and btnp(5) then
         change_mode("menu")
     end
 end
 
----Count non-empty cells visible on the board
+---Count non-empty cells visible on the board (rows 3-22)
 ---@return integer
-function World:victory_count_filled()
+function World:end_anim_count_filled()
     local count = 0
     for row = 3, #self.grid do
         for col = 1, #self.grid[row] do
@@ -282,9 +290,8 @@ function World:victory_count_filled()
     return count
 end
 
----Pick a random filled cell, record it as a new pop, and erase it from the grid
-function World:victory_pop_random_block()
-    -- Collect all filled positions
+---Pick a random filled cell, register a pop, and erase it from the grid
+function World:end_anim_pop_random_block()
     local filled = {}
     for row = 3, #self.grid do
         for col = 1, #self.grid[row] do
@@ -295,35 +302,40 @@ function World:victory_pop_random_block()
     end
     if #filled == 0 then return end
 
-    -- Pick one at random
-    local chosen = filled[flr(rnd(#filled)) + 1]
+    local chosen                      = filled[flr(rnd(#filled)) + 1]
+    local spr_idx                     = chosen.spr
+    local color                       = sget((spr_idx % 16) * 8 + 3, flr(spr_idx / 16) * 8 + 3)
 
-    -- Sample the sprite colour (same method used elsewhere)
-    local spr_idx = chosen.spr
-    local color = sget((spr_idx % 16) * 8 + 3, flr(spr_idx / 16) * 8 + 3)
+    -- Defeat pops are slower (duration 20) and flash dark; victory pops are crisp (duration 12)
+    local is_defeat                   = (self.end_anim.mode == "defeat")
+    local duration                    = is_defeat and 20 or 12
+    local flash_col                   = is_defeat and 1 or 7 -- dark blue flash vs white flash
 
-    -- Erase from grid immediately
     self.grid[chosen.row][chosen.col] = self.grid_spr
 
-    -- Register the pop animation
-    add(self.victory_anim.pops, {
-        row      = chosen.row,
-        col      = chosen.col,
-        color    = color,
-        timer    = 0,
-        duration = 12
+    add(self.end_anim.pops, {
+        row       = chosen.row,
+        col       = chosen.col,
+        color     = color,
+        flash_col = flash_col,
+        timer     = 0,
+        duration  = duration
     })
 end
 
 ---Burst particles from the centre of a finished pop
 ---@param pop table
-function World:spawn_victory_particles(pop)
+function World:spawn_end_particles(pop)
     local bx = self.board_x + (pop.col - 1) * self.block_size + self.block_size / 2
     local by = self.board_y + (pop.row - 1) * self.block_size + self.block_size / 2
-    for i = 1, 4 do
+    local is_defeat = (self.end_anim.mode == "defeat")
+    -- Defeat gets 2 dim particles; victory gets 4 bright ones
+    local count = is_defeat and 2 or 4
+    local color = is_defeat and 1 or pop.color
+    for i = 1, count do
         local px = bx + (rnd(self.block_size) - self.block_size / 2)
         local py = by + (rnd(self.block_size) - self.block_size / 2)
-        add(self.particles, Particle:new(px, py, pop.color))
+        add(self.particles, Particle:new(px, py, color))
     end
 end
 
@@ -334,12 +346,6 @@ function World:update_line_clear_animation()
         self.state = WORLD_STATE.PLAYING
         self:clear_completed_lines()
         self:finish_turn()
-    end
-end
-
-function World:update_game_over()
-    if btnp(5) then
-        change_mode("menu")
     end
 end
 
@@ -600,8 +606,8 @@ end
 function World:finish_turn()
     self.active_piece = nil
     if self.challenge.is_victory(self) then
-        -- set it to victory and do not create another piece
         self.state = WORLD_STATE.VICTORY
+        self.end_anim.mode = "victory"
         return
     end
     self:spawn_next_piece()
@@ -613,11 +619,13 @@ function World:spawn_next_piece()
     for column = 1, #self.grid[1] do
         if self.grid[2][column] ~= self.grid_spr then
             self.state = WORLD_STATE.GAME_OVER
+            self.end_anim.mode = "defeat"
         end
     end
 
     if not self:can_move(0, 0) then
         self.state = WORLD_STATE.GAME_OVER
+        self.end_anim.mode = "defeat"
     end
 end
 
@@ -888,82 +896,78 @@ function World:draw_world()
         if self.shake_x < 0.1 then self.shake_x = 0 end
         if self.shake_y < 0.1 then self.shake_y = 0 end
     end
+    local is_end_game = self.state == WORLD_STATE.GAME_OVER or self.state == WORLD_STATE.VICTORY
+
     self:draw_diagonal_lines()
     self:draw_grid()
     self:draw_next_piece()
     self:draw_held_piece()
-    self:draw_ghost_piece()
     self:draw_drop_trails()
-    self:draw_active_piece()
     self:draw_border()
     self:draw_text_info()
+    if not is_end_game then
+        self:draw_ghost_piece()
+        self:draw_active_piece()
+    end
     self:draw_particles()
 
     if self.state == WORLD_STATE.LINE_CLEAR then
         self:draw_line_clear_animation()
-    elseif self.state == WORLD_STATE.GAME_OVER then
-        self.timer.game_over_banner += 1
-        self:draw_defeat(self.timer.game_over_banner)
-    elseif self.state == WORLD_STATE.VICTORY then
-        self:draw_victory()
+    elseif is_end_game then
+        self:draw_end_anim()
     end
     camera(0, 0)
 end
 
-function World:draw_victory()
+---Draw all active pops and, once done, the appropriate banner
+function World:draw_end_anim()
+    local ea = self.end_anim
+    local is_defeat = (ea.mode == "defeat")
+
     palt(0, false)
-    local bx, bs, by = self.board_x, self.block_size, self.board_y
-    for pop in all(self.victory_anim.pops) do
-        if pop.timer >= 4 then
-            local progress = (pop.timer - 4) / (pop.duration - 4)
-            local shrink   = 1 - progress
-            local height   = bs * shrink
-            local x        = bx + (pop.col - 1) * bs
-            local y        = by + (pop.row - 1) * bs + (bs - height) / 2
-            rectfill(x, y, x + bs - 1, y + height - 1, 7)
+    for _, pop in ipairs(ea.pops) do
+        local flash_frames = is_defeat and 7 or 4 -- defeat holds the flash longer
+        if pop.timer >= flash_frames then
+            local progress = (pop.timer - flash_frames) / (pop.duration - flash_frames)
+            local height   = self.block_size * (1 - progress)
+            local x        = self.board_x + (pop.col - 1) * self.block_size
+            local y        = self.board_y + (pop.row - 1) * self.block_size + (self.block_size - height) / 2
+            rectfill(x, y, x + self.block_size - 1, y + height - 1, pop.flash_col)
         else
-            local x = bx + (pop.col - 1) * bs
-            local y = by + (pop.row - 1) * bs
-            rectfill(x, y, x + bs - 1, y + bs - 1, 7)
+            local x = self.board_x + (pop.col - 1) * self.block_size
+            local y = self.board_y + (pop.row - 1) * self.block_size
+            rectfill(x, y, x + self.block_size - 1, y + self.block_size - 1, pop.flash_col)
         end
     end
     palt(0, true)
 
-    if self.victory_anim.done then
-        self.timer.victory_banner += 1
-        self:draw_victory_banner(self.timer.victory_banner)
+    if ea.done then
+        if is_defeat then
+            self.timer.game_over_banner += 1
+            self:draw_defeat_banner(self.timer.game_over_banner)
+        else
+            self.timer.victory_banner += 1
+            self:draw_victory_banner(self.timer.victory_banner)
+        end
     end
 end
 
-function World:draw_defeat(t)
+function World:draw_defeat_banner(t)
     local h = min(16, t)
-
-    -- phase 2: expand from center
-    if t > 60 then
-        h = min(64, 16 + (t - 60))
-    end
-
+    if t > 60 then h = min(64, 16 + (t - 60)) end
     local cy = 64
-
     rectfill(0, cy - h, 127, cy - 1, 0)
     rectfill(0, cy, 127, cy + h - 1, 0)
-
     if t > 10 then
-        print("game over", 44, 60, 8)
+        print("game over", 44, 60, 1)
     end
 end
 
 function World:draw_victory_banner(t)
     local h = min(16, t)
-
-    -- after 60 frames, expand fully
-    if t > 60 then
-        h = min(64, 16 + (t - 60))
-    end
-
+    if t > 60 then h = min(64, 16 + (t - 60)) end
     rectfill(0, 0, 127, h, 0)
     rectfill(0, 127 - h, 127, 127, 0)
-
     if t > 10 then
         print("victory!", 48, 60, 7)
     end
