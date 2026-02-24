@@ -217,15 +217,11 @@ end
 ---Draw the complete menu
 function Menu:draw_menu()
     self:draw_diagonal_lines()
-    local logo_width = 62
-    local logo_height = 38
-
-    local x = (127 - logo_width) / 2
-    local y = (127 - logo_height) / 2 - 30
-    local t = time()
+    local logo_width, logo_height = 62, 38
+    local x, y, t = (127 - logo_width) / 2, (127 - logo_height) / 2 - 30, time()
     local offset = sin(t * 0.5) * 2 -- speed * amplitude
 
-    circfill(x + logo_width / 2, y + offset + logo_height / 2, 30 + 1, 0)
+    circfill(x + logo_width / 2, y + offset + logo_height / 2, 31, 0)
     circfill(x + logo_width / 2, y + offset + logo_height / 2, 30, 1)
 
     for i = 1, 15 do
@@ -235,9 +231,7 @@ function Menu:draw_menu()
     pal(0)
     spr(16, x, y + offset, logo_width, logo_height)
 
-    local box_y = 72
-    local box_w = 70
-    local box_h = 37
+    local box_y, box_w, box_h = 72, 70, 37
     local box_x = (127 - box_w) / 2
     self:draw_menu_items(box_x, box_y, box_w, box_h)
 end

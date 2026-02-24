@@ -93,7 +93,6 @@ end
 ---@field drop_interval_max integer
 ---@field ui_color integer
 ---@field border_color integer
----@field network ParticleNetwork
 ---@field frame_count integer
 ---@field pieces_used integer
 ---@field cleared_bottom_row boolean
@@ -165,10 +164,17 @@ function World:new(challenge)
 
     w.ui_color = 5
     w.border_color = 1
-    w.network = ParticleNetwork:new(40, 24, 1)
     w.frame_count = 0
     w.pieces_used = 0
     w.cleared_bottom_row = false
+
+    -- Victory animation state
+    w.victory_anim = {
+        pops         = {},   -- active pop animations: {row, col, timer, duration, color}
+        pop_timer    = 0,    -- counts up; triggers a new pop every pop_interval frames
+        pop_interval = 6,    -- frames between pops (speeds up as board empties)
+        done         = false -- all blocks cleared and last pop finished
+    }
     w.time_remaining = nil
     w.time_mode = "countup" -- or "countdown" for time attack
 
@@ -196,7 +202,6 @@ function World:update_world()
         return
     end
 
-    self.network:update()
     if self.state == WORLD_STATE.PLAYING then
         self.frame_count += 1
 
@@ -224,8 +229,99 @@ function World:update_world()
 end
 
 function World:update_victory()
-    if btnp(5) then
+    local va = self.victory_anim
+
+    -- Advance each active pop
+    local still_popping = {}
+    for _, pop in ipairs(va.pops) do
+        pop.timer += 1
+        if pop.timer == pop.duration then
+            -- Pop finished — spawn particles
+            self:spawn_victory_particles(pop)
+        end
+        if pop.timer < pop.duration then
+            add(still_popping, pop)
+        end
+    end
+    va.pops = still_popping
+
+    -- Count remaining filled cells (rows 3-22 to stay below the hidden rows)
+    local filled = self:victory_count_filled()
+
+    if filled > 0 then
+        -- Ramp up pop rate as the board empties: fewer blocks = faster pops
+        va.pop_interval = max(2, 6 - flr((1 - filled / 220) * 4))
+        va.pop_timer += 1
+        if va.pop_timer >= va.pop_interval then
+            va.pop_timer = 0
+            self:victory_pop_random_block()
+        end
+    elseif #va.pops == 0 then
+        -- Board clear and all animations done
+        va.done = true
+    end
+
+    if va.done and btnp(5) then
         change_mode("menu")
+    end
+end
+
+---Count non-empty cells visible on the board
+---@return integer
+function World:victory_count_filled()
+    local count = 0
+    for row = 3, #self.grid do
+        for col = 1, #self.grid[row] do
+            if self.grid[row][col] ~= self.grid_spr then
+                count += 1
+            end
+        end
+    end
+    return count
+end
+
+---Pick a random filled cell, record it as a new pop, and erase it from the grid
+function World:victory_pop_random_block()
+    -- Collect all filled positions
+    local filled = {}
+    for row = 3, #self.grid do
+        for col = 1, #self.grid[row] do
+            if self.grid[row][col] ~= self.grid_spr then
+                add(filled, { row = row, col = col, spr = self.grid[row][col] })
+            end
+        end
+    end
+    if #filled == 0 then return end
+
+    -- Pick one at random
+    local chosen = filled[flr(rnd(#filled)) + 1]
+
+    -- Sample the sprite colour (same method used elsewhere)
+    local spr_idx = chosen.spr
+    local color = sget((spr_idx % 16) * 8 + 3, flr(spr_idx / 16) * 8 + 3)
+
+    -- Erase from grid immediately
+    self.grid[chosen.row][chosen.col] = self.grid_spr
+
+    -- Register the pop animation
+    add(self.victory_anim.pops, {
+        row      = chosen.row,
+        col      = chosen.col,
+        color    = color,
+        timer    = 0,
+        duration = 12
+    })
+end
+
+---Burst particles from the centre of a finished pop
+---@param pop table
+function World:spawn_victory_particles(pop)
+    local bx = self.board_x + (pop.col - 1) * self.block_size + self.block_size / 2
+    local by = self.board_y + (pop.row - 1) * self.block_size + self.block_size / 2
+    for i = 1, 4 do
+        local px = bx + (rnd(self.block_size) - self.block_size / 2)
+        local py = by + (rnd(self.block_size) - self.block_size / 2)
+        add(self.particles, Particle:new(px, py, pop.color))
     end
 end
 
@@ -512,14 +608,12 @@ end
 function World:spawn_next_piece()
     self:create_new_active_piece()
 
-    -- Check if there's any piece above the line
     for column = 1, #self.grid[1] do
         if self.grid[2][column] ~= self.grid_spr then
             self.state = WORLD_STATE.GAME_OVER
         end
     end
 
-    -- Check if it's invalid
     if not self:can_move(0, 0) then
         self.state = WORLD_STATE.GAME_OVER
     end
@@ -558,7 +652,6 @@ function World:clear_completed_lines()
 
     self:create_particles_for_line_clear()
 
-    -- Check if bottom row was cleared (for garbage challenge)
     for _, cleared_row in ipairs(self.animation.lines) do
         if cleared_row == rows then
             self.cleared_bottom_row = true
@@ -566,7 +659,6 @@ function World:clear_completed_lines()
         end
     end
 
-    -- Use the stored line numbers from animation
     for read_row = rows, 1, -1 do
         local is_cleared = false
         for _, cleared_row in ipairs(self.animation.lines) do
@@ -577,7 +669,6 @@ function World:clear_completed_lines()
         end
 
         if not is_cleared then
-            -- Copy non-cleared row to bottom
             if write_row ~= read_row then
                 for column = 1, columns do
                     self.grid[write_row][column] = self.grid[read_row][column]
@@ -587,14 +678,12 @@ function World:clear_completed_lines()
         end
     end
 
-    -- Clear top rows (now empty space)
     for row = 1, #self.animation.lines do
         for column = 1, columns do
             self.grid[row][column] = self.grid_spr
         end
     end
 
-    -- Score the cleared lines
     self:update_score(self.animation.type, self.animation.lines_count)
 
     -- Reset animation
@@ -624,7 +713,6 @@ function World:check_line_completion()
         end
     end
 
-    -- Determine score type based on lines cleared + tspin status
     local score_type = nil
     if lines_completed > 0 then
         score_type = self.is_tspin and "tspin" or self.is_mini_tspin and "mini_tspin" or "lines"
@@ -674,12 +762,10 @@ end
 ---Replenishes the piece bag.
 function World:refill_queue()
     local bag = { "I", "O", "T", "S", "Z", "J", "L" }
-    -- Shuffle
     for i = #bag, 2, -1 do
         local j = flr(rnd(i)) + 1
         bag[i], bag[j] = bag[j], bag[i]
     end
-    -- Append to queue
     for p in all(bag) do
         add(self.piece_queue, p)
     end
@@ -690,7 +776,6 @@ function World:create_new_active_piece()
     local piece_type = deli(self.piece_queue, 1)
     self.active_piece = TetrisPiece:new(piece_type, self.spawn_rotation, self.spawn_row, self.spawn_column)
 
-    -- Ensure enough for preview
     if #self.piece_queue < self.preview then
         self:refill_queue()
     end
@@ -706,7 +791,6 @@ function World:lock_active_piece()
         self.grid[block_row][block_column] = self.active_piece.spr
     end
     self:check_tspin()
-    -- reset hold
     self.can_hold = true
     self.pieces_used += 1
 end
@@ -718,42 +802,23 @@ function World:check_tspin()
     if self.active_piece.spr == 3 and self.last_action == "rotation" then -- T-piece only
         local pivot_row = self.active_piece.row + 1
         local pivot_col = self.active_piece.column + 1
-
-        -- Define corners based on rotation (A,B = front; C,D = back)
         local corners_map = {
-            -- North (rotation 1): pointing up
             [1] = {
-                A = { -1, -1 },
-                B = { -1, 1 }, -- Top corners = front
-                C = { 1, -1 },
-                D = { 1, 1 }   -- Bottom corners = back
+                A, B, C, D = { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 }
             },
-            -- East (rotation 2): pointing right
             [2] = {
-                A = { -1, 1 },
-                B = { 1, 1 }, -- Right corners = front
-                C = { -1, -1 },
-                D = { 1, -1 } -- Left corners = back
+                A, B, C, D = { -1, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 }
             },
-            -- South (rotation 3): pointing down
             [3] = {
-                A = { 1, -1 },
-                B = { 1, 1 }, -- Bottom corners = front
-                C = { -1, -1 },
-                D = { -1, 1 } -- Top corners = back
+                A, B, C, D = { 1, -1 }, { 1, 1 }, { -1, -1 }, { -1, 1 }
             },
-            -- West (rotation 4): pointing left
             [4] = {
-                A = { -1, -1 },
-                B = { 1, -1 }, -- Left corners = front
-                C = { -1, 1 },
-                D = { 1, 1 }   -- Right corners = back
+                A, B, C, D = { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 }
             }
         }
 
         local corners = corners_map[self.active_piece.rotation]
 
-        -- Check which corners are filled
         local filled = { A = false, B = false, C = false, D = false }
         for name, offset in pairs(corners) do
             local c_row = pivot_row + offset[1]
@@ -764,21 +829,16 @@ function World:check_tspin()
             end
         end
 
-        -- Count total filled corners
         local total_filled = 0
-        for _, is_filled in pairs(filled) do
+        for is_filled in all(filled) do
             if is_filled then total_filled += 1 end
         end
 
-        -- T-Spin detection (need at least 3 corners filled or special case)
         if total_filled >= 3 then
-            -- Special case: Kick #5 (TST/Fin kick) always counts as full T-spin
             if self.last_rotation_kick == 5 then
                 self.is_tspin = true
-                -- Full T-Spin: A and B (front) + at least one of C or D (back)
             elseif filled.A and filled.B and (filled.C or filled.D) then
                 self.is_tspin = true
-                -- Mini T-Spin: C and D (back) + at least one of A or B (front)
             elseif filled.C and filled.D and (filled.A or filled.B) then
                 self.is_mini_tspin = true
             end
@@ -795,12 +855,10 @@ function World:can_move(delta_row, delta_column)
         local block_row = self.active_piece.row + delta_row + block[1]
         local block_column = self.active_piece.column + delta_column + block[2]
 
-        -- check if the block is out of bounds
         if not self:is_position_valid(block_row, block_column) then
             return false
         end
 
-        -- check if the block collides with existing blocks in the grid
         if self.grid[block_row][block_column] ~= self.grid_spr then
             return false
         end
@@ -823,13 +881,11 @@ function World:draw_world()
         local dx = rnd(self.shake_x) - self.shake_x / 2
         local dy = rnd(self.shake_y) - self.shake_y / 2
         camera(dx, dy)
-        -- Decay the shake value
         self.shake_x = self.shake_x * 0.3
         self.shake_y = self.shake_y * 0.3
         if self.shake_x < 0.1 then self.shake_x = 0 end
         if self.shake_y < 0.1 then self.shake_y = 0 end
     end
-    -- self.network:draw()
     self:draw_diagonal_lines()
     self:draw_grid()
     self:draw_next_piece()
@@ -848,11 +904,34 @@ function World:draw_world()
         print("\f7\^o0ffgame over", 50, 50)
         print("press x to go back to the menu", 0, 56 + 20)
     elseif self.state == WORLD_STATE.VICTORY then
-        print("\f7\^o0ffvictory", 50, 50)
-        print("press x to go back to the menu", 0, 56 + 20)
+        self:draw_victory()
     end
-    -- print("score" .. tostring(self.score), 2, 50)
     camera(0, 0)
+end
+
+function World:draw_victory()
+    palt(0, false)
+    local bx, bs, by = self.board_x, self.block_size, self.board_y
+    for pop in all(self.victory_anim.pops) do
+        if pop.timer >= 4 then
+            local progress = (pop.timer - 4) / (pop.duration - 4)
+            local shrink   = 1 - progress
+            local height   = bs * shrink
+            local x        = bx + (pop.col - 1) * bs
+            local y        = by + (pop.row - 1) * bs + (bs - height) / 2
+            rectfill(x, y, x + bs - 1, y + height - 1, 7)
+        else
+            local x = bx + (pop.col - 1) * bs
+            local y = by + (pop.row - 1) * bs
+            rectfill(x, y, x + bs - 1, y + bs - 1, 7)
+        end
+    end
+    palt(0, true)
+
+    if self.victory_anim.done then
+        print("\f7\^o0ffvictory!", 45, 50)
+        print("press \142 to continue", 20, 60)
+    end
 end
 
 function World:draw_text_info()
@@ -1051,77 +1130,51 @@ end
 ---@param shape table
 ---@param sprite_num integer
 function World:draw_piece_outline(piece_row, piece_col, shape, sprite_num)
-    -- Get the sprite color
     local sprite_color = sget((sprite_num % 16) * 8 + 3, flr(sprite_num / 16) * 8 + 3)
 
-    -- Build a set of occupied positions for fast lookup
     local occupied = {}
     for _, block in pairs(shape) do
         local key = block[1] .. "," .. block[2]
         occupied[key] = true
     end
 
-    -- Helper to check if a position is occupied
     local function is_occupied(r, c)
         return occupied[r .. "," .. c] == true
     end
 
-    -- Draw each block's edges only if they're on the perimeter
     for _, block in pairs(shape) do
         local block_row = piece_row + block[1]
         local block_col = piece_col + block[2]
-
-        -- Skip if off-screen
         if block_row <= 3 then
             goto continue
         end
-
         local x = self.board_x + (block_col - 1) * self.block_size
         local y = self.board_y + (block_row - 1) * self.block_size
-
         local has_top = is_occupied(block[1] - 1, block[2])
         local has_bottom = is_occupied(block[1] + 1, block[2])
         local has_left = is_occupied(block[1], block[2] - 1)
         local has_right = is_occupied(block[1], block[2] + 1)
-
-        -- Draw edges only where there's no adjacent block
-        -- Top edge
         if not has_top then
             line(x, y, x + self.block_size - 1, y, sprite_color)
         end
-
-        -- Bottom edge
         if not has_bottom then
             line(x, y + self.block_size - 1, x + self.block_size - 1, y + self.block_size - 1, sprite_color)
         end
-
-        -- Left edge
         if not has_left then
             line(x, y, x, y + self.block_size - 1, sprite_color)
         end
-
-        -- Right edge
         if not has_right then
             line(x + self.block_size - 1, y, x + self.block_size - 1, y + self.block_size - 1, sprite_color)
         end
-
-        -- Draw corner pixels for inside corners (where two edges meet at 90°)
-        -- Top-left inside corner
         if has_top and has_left and not is_occupied(block[1] - 1, block[2] - 1) then
             pset(x, y, sprite_color)
         end
-
-        -- Top-right inside corner
         if has_top and has_right and not is_occupied(block[1] - 1, block[2] + 1) then
             pset(x + self.block_size - 1, y, sprite_color)
         end
-
-        -- Bottom-left inside corner
         if has_bottom and has_left and not is_occupied(block[1] + 1, block[2] - 1) then
             pset(x, y + self.block_size - 1, sprite_color)
         end
-
-        -- Bottom-right inside corner
         if has_bottom and has_right and not is_occupied(block[1] + 1, block[2] + 1) then
             pset(x + self.block_size - 1, y + self.block_size - 1, sprite_color)
         end
