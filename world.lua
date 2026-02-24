@@ -142,6 +142,7 @@ function World:new(challenge)
         drop = 0,
         hard = 0,
         victory_banner = 0,
+        game_over_banner = 0
     }
     w.is_tspin = false
     w.is_mini_tspin = false
@@ -901,9 +902,8 @@ function World:draw_world()
     if self.state == WORLD_STATE.LINE_CLEAR then
         self:draw_line_clear_animation()
     elseif self.state == WORLD_STATE.GAME_OVER then
-        cls()
-        print("\f7\^o0ffgame over", 50, 50)
-        print("press x to go back to the menu", 0, 56 + 20)
+        self.timer.game_over_banner += 1
+        self:draw_defeat(self.timer.game_over_banner)
     elseif self.state == WORLD_STATE.VICTORY then
         self:draw_victory()
     end
@@ -931,11 +931,29 @@ function World:draw_victory()
 
     if self.victory_anim.done then
         self.timer.victory_banner += 1
-        draw_victory_banner(self.timer.victory_banner)
+        self:draw_victory_banner(self.timer.victory_banner)
     end
 end
 
-function draw_victory_banner(t)
+function World:draw_defeat(t)
+    local h = min(16, t)
+
+    -- phase 2: expand from center
+    if t > 60 then
+        h = min(64, 16 + (t - 60))
+    end
+
+    local cy = 64
+
+    rectfill(0, cy - h, 127, cy - 1, 0)
+    rectfill(0, cy, 127, cy + h - 1, 0)
+
+    if t > 10 then
+        print("game over", 44, 60, 8)
+    end
+end
+
+function World:draw_victory_banner(t)
     local h = min(16, t)
 
     -- after 60 frames, expand fully
