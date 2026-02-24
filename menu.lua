@@ -13,7 +13,7 @@ function Menu:new()
     m.items = {
         "start",
         "mode",
-        "options"
+        "music"
     }
 
     m.selected = 1
@@ -86,6 +86,12 @@ function Menu:update_menu()
         elseif self.selected == 2 then
             -- cycle through challenges
         elseif self.selected == 3 then
+            music_flag = not music_flag
+            if music_flag == false then
+                music(-1, 1000)
+            else
+                music(12, 1000)
+            end
             -- change_mode("options")
         end
     end
@@ -175,6 +181,8 @@ function Menu:draw_menu_items(box_x, box_y, box_w, box_h)
         local text = self.items[i]
         if i == 2 then
             text = "mode: " .. self:current_challenge().name
+        elseif i == 3 then
+            text = "music " .. (music_flag and "on" or "off")
         end
 
         local text_w = #text * 4
