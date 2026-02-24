@@ -37,12 +37,12 @@ end
 
 ---Update particle physics
 function Particle:update()
-    self.age = self.age + 1
+    self.age += 1
     -- Fire-like movement: slow upward drift + horizontal waver
-    self.x = self.x + self.vx
-    self.y = self.y + self.vy
+    self.x += self.vx
+    self.y += self.vy
     -- Horizontal oscillation (fire flicker)
-    self.vx = self.vx + (rnd(0.2) - 0.1)
+    self.vx += (rnd(0.2) - 0.1)
     -- Slow down over time (fire dissipates)
     self.vy = self.vy * 0.98
     self.vx = self.vx * 0.95
@@ -326,7 +326,7 @@ function World:spawn_victory_particles(pop)
 end
 
 function World:update_line_clear_animation()
-    self.animation.timer = self.animation.timer + 1
+    self.animation.timer += 1
 
     if self.animation.timer >= self.animation.duration then
         self.state = WORLD_STATE.PLAYING
@@ -355,7 +355,7 @@ end
 function World:update_drop_trails()
     local active_trails = {}
     for _, trail in ipairs(self.drop_trails) do
-        trail.timer = trail.timer + 1
+        trail.timer += 1
 
         -- Eased progression (quad ease-out for snappy feel)
         local t = trail.timer / trail.duration
@@ -448,8 +448,8 @@ function World:handle_input_playing()
             -- It starts at 1 because the piece will move down at least 1 row
             local drop_distance = 1
             while self:can_move(1, 0) do
-                self.active_piece.row = self.active_piece.row + 1
-                drop_distance = drop_distance + 1
+                self.active_piece.row += 1
+                drop_distance += 1
             end
             sfx(6, 3)
             self.shake_y += 3
@@ -534,8 +534,8 @@ function World:handle_rotation(rot)
     local kicked = false
     for idx, kick in ipairs(kicks) do
         if self:can_move(kick[1], kick[2]) then
-            self.active_piece.row = self.active_piece.row + kick[1]
-            self.active_piece.column = self.active_piece.column + kick[2]
+            self.active_piece.row += kick[1]
+            self.active_piece.column += kick[2]
             self.last_rotation_kick = idx
             kicked = true
             break
@@ -553,7 +553,7 @@ end
 
 ---Every so often the game will force the active piece down. This is the function that handles that.
 function World:handle_auto_drop()
-    self.timer.drop = self.timer.drop + 1
+    self.timer.drop += 1
     if self.timer.drop == self.drop_interval then
         self:try_move_piece_down()
     end
@@ -563,7 +563,7 @@ end
 function World:try_move_piece_down()
     self.timer.drop = 0
     if self:can_move(1, 0) then
-        self.active_piece.row = self.active_piece.row + 1
+        self.active_piece.row += 1
     else
         self:lock_active_piece()
 
@@ -674,7 +674,7 @@ function World:clear_completed_lines()
                     self.grid[write_row][column] = self.grid[read_row][column]
                 end
             end
-            write_row = write_row - 1
+            write_row -= 1
         end
     end
 
@@ -708,7 +708,7 @@ function World:check_line_completion()
             end
         end
         if full then
-            lines_completed = lines_completed + 1
+            lines_completed += 1
             add(completed_rows, row)
         end
     end
@@ -742,17 +742,17 @@ function World:update_score(score_type, amount)
         local time_bonus = { [1] = 60 * 3, [2] = 60 * 6 } -- 3s, 6s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "soft_drop" then
-        self.score = self.score + amount
+        self.score += amount
     elseif score_type == "hard_drop" then
-        self.score = self.score + amount * 2
+        self.score += amount * 2
     end
 end
 
 function World:update_score_line_clear(points, time_bonus, amount)
-    self.lines_cleared = self.lines_cleared + amount
+    self.lines_cleared += amount
     self.level = flr(self.lines_cleared / 10) + 1
     self.drop_interval = max(5, self.drop_interval_max - (self.level * 2 - 2))
-    self.score = self.score + points[amount] * self.level
+    self.score += points[amount] * self.level
 
     if self.challenge.name == "rush" and self.time_remaining and amount > 0 then
         self.time_remaining += time_bonus[amount]
