@@ -179,7 +179,10 @@ function World:new(challenge)
         done         = false -- all blocks cleared and last pop finished
     }
     w.time_remaining = nil
-    w.time_mode = "countup" -- or "countdown" for time attack
+    w.time_mode = "countup"
+    w.frame_lo = 0
+    w.secs_hi, w.secs_lo = 0, 0
+    w.score_hi, w.score_lo = 0, 0
 
     w:refill_queue()
     w:refill_queue()
@@ -206,7 +209,11 @@ function World:update_world()
     end
 
     if self.state == WORLD_STATE.PLAYING then
-        self.frame_count += 1
+        self.frame_lo += 10
+        if self.frame_lo >= 60 then
+            self.frame_lo = 0
+            self.secs_hi, self.secs_lo = big_add(self.secs_hi, self.secs_lo, 1, 6000)
+        end
 
         if self.challenge.on_update then
             self.challenge.on_update(self)
@@ -751,17 +758,21 @@ function World:update_score(score_type, amount)
         local time_bonus = { [1] = 60 * 3, [2] = 60 * 6 } -- 3s, 6s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "soft_drop" then
-        self.score += amount
+        self:add_score(amount)
     elseif score_type == "hard_drop" then
-        self.score += amount * 2
+        self:add_score(amount * 2)
     end
+end
+
+function World:add_score(amount)
+    self.score_hi, self.score_lo = big_add(self.score_hi, self.score_lo, amount, 10000)
 end
 
 function World:update_score_line_clear(points, time_bonus, amount)
     self.lines_cleared += amount
     self.level = flr(self.lines_cleared / 10) + 1
     self.drop_interval = max(5, self.drop_interval_max - (self.level * 2 - 2))
-    self.score += points[amount] * self.level
+    self:add_score(points[amount] * self.level)
 
     if self.challenge.name == "rush" and self.time_remaining and amount > 0 then
         self.time_remaining += time_bonus[amount]
@@ -993,7 +1004,7 @@ function World:draw_text_info()
     y_offset += 12
     print_centered("score", x_offset, self.board_x - 1, y_offset, self.ui_color)
     y_offset += 6
-    print_centered(tostring(self.score), x_offset, self.board_x - 1, y_offset, self.ui_color)
+    print_centered(self:score_str(), x_offset, self.board_x - 1, y_offset, self.ui_color)
 
     y_offset = 127 - 6 * 5
     x_offset = self.board_x + self.block_size * #self.grid[1] + 2
@@ -1007,18 +1018,22 @@ function World:draw_text_info()
     print_centered(self:get_time(), x_offset, 127, y_offset, self.ui_color)
 end
 
-function World:get_time()
-    local total_seconds = flr(self.frame_count / 60)
-    if self.time_mode == "countdown" then
-        total_seconds = flr(self.time_remaining / 60)
+function World:score_str()
+    if self.score_hi > 0 then
+        local lo = tostring(self.score_lo)
+        while #lo < 4 do lo = "0" .. lo end
+        return tostring(self.score_hi) .. lo
     end
-    local minutes = flr(total_seconds / 60)
-    local seconds = total_seconds % 60
+    return tostring(self.score_lo)
+end
 
-    local min_str = (minutes < 10 and "0" or "") .. minutes
-    local sec_str = (seconds < 10 and "0" or "") .. seconds
-
-    return min_str .. ":" .. sec_str
+function World:get_time()
+    local total_secs = self.secs_hi * 6000 + self.secs_lo
+    local mins = flr(total_secs / 60)
+    local secs = total_secs % 60
+    local ms = tostring(mins < 10 and "0" .. mins or mins)
+    local ss = tostring(secs < 10 and "0" .. secs or secs)
+    return ms .. ":" .. ss
 end
 
 function print_centered(text, x_start, x_end, y, col)
@@ -1248,4 +1263,13 @@ function World:draw_diagonal_lines()
         local x2 = i + 128 + scroll
         line(x1, 128, x2, 0, c)
     end
+end
+
+function big_add(hi, lo, n, base)
+    lo += n
+    if lo >= base then
+        hi += flr(lo / base)
+        lo = lo % base
+    end
+    return hi, lo
 end
