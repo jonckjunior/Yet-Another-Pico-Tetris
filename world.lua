@@ -209,7 +209,7 @@ function World:update_world()
     end
 
     if self.state == WORLD_STATE.PLAYING then
-        self.frame_lo += 10
+        self.frame_lo += 1
         if self.frame_lo >= 60 then
             self.frame_lo = 0
             self.secs_hi, self.secs_lo = big_add(self.secs_hi, self.secs_lo, 1, 6000)
@@ -306,26 +306,23 @@ function World:end_anim_pop_random_block()
     local chosen                      = filled[flr(rnd(#filled)) + 1]
     local spr_idx                     = chosen.spr
     local color                       = sget((spr_idx % 16) * 8 + 3, flr(spr_idx / 16) * 8 + 3)
+    local ea                          = self.end_anim
 
-    -- Defeat pops are slower (duration 20) and flash dark; victory pops are crisp (duration 12)
-    local is_defeat                   = (self.end_anim.mode == "defeat")
-    local duration                    = 12
-    local flash_col                   = is_defeat and 1 or 7 -- dark blue flash vs white flash
+    local flash_col                   = ((ea.mode == "defeat")) and 1 or 7 -- dark blue flash vs white flash
 
     self.grid[chosen.row][chosen.col] = self.grid_spr
-    if self.end_anim.mode == "victory" then
-        self.shake_x = 3
-        self.shake_y = 3
+    if ea.mode == "victory" then
+        self.shake_x, self.shake_y = 3, 3
     end
 
 
-    add(self.end_anim.pops, {
+    add(ea.pops, {
         row       = chosen.row,
         col       = chosen.col,
         color     = color,
         flash_col = flash_col,
         timer     = 0,
-        duration  = duration
+        duration  = 12
     })
 end
 
@@ -520,22 +517,20 @@ end
 ---Handles rotation input using SRS kick tables
 ---@param rot integer
 function World:handle_rotation(rot)
-    local old_rotation = self.active_piece.rotation
-    local old_shape = self.active_piece.shape
-    local old_row = self.active_piece.row
-    local old_col = self.active_piece.column
+    local ap = self.active_piece
+    local old_rotation, old_shape, old_row, old_col = ap.rotation, ap.shape, ap.row, ap.column
 
-    self.active_piece:rotate(rot)
-    local new_rotation = self.active_piece.rotation
+    ap:rotate(rot)
+    local new_rotation = ap.rotation
 
     -- O-piece doesn't need kicks
-    if self.active_piece.shapeId == "O" then
+    if ap.shapeId == "O" then
         return
     end
 
     -- Select appropriate kick table
     local kick_table
-    if self.active_piece.shapeId == "I" then
+    if ap.shapeId == "I" then
         kick_table = SRS_KICKS_I
     else
         kick_table = SRS_KICKS_JLSTZ
@@ -548,8 +543,8 @@ function World:handle_rotation(rot)
     local kicked = false
     for idx, kick in ipairs(kicks) do
         if self:can_move(kick[1], kick[2]) then
-            self.active_piece.row += kick[1]
-            self.active_piece.column += kick[2]
+            ap.row += kick[1]
+            ap.column += kick[2]
             self.last_rotation_kick = idx
             kicked = true
             break
@@ -558,10 +553,10 @@ function World:handle_rotation(rot)
 
     if not kicked then
         -- Revert rotation if no kick worked
-        self.active_piece.rotation = old_rotation
-        self.active_piece.shape = old_shape
-        self.active_piece.row = old_row
-        self.active_piece.column = old_col
+        ap.rotation = old_rotation
+        ap.shape = old_shape
+        ap.row = old_row
+        ap.column = old_col
     end
 end
 
