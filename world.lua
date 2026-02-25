@@ -506,9 +506,10 @@ function World:handle_hold()
     self.held_piece:set_rotation(1)
 
     -- reset position and rotation of the active piece
-    self.active_piece.row = self.spawn_row
-    self.active_piece.column = self.spawn_column
-    self.active_piece.rotation = self.spawn_rotation
+    local ap = self.active_piece
+    ap.row = self.spawn_row
+    ap.column = self.spawn_column
+    ap.rotation = self.spawn_rotation
 
     -- reset drop timer so it doesn't drop immediately
     self.timer.drop = 0
@@ -553,10 +554,7 @@ function World:handle_rotation(rot)
 
     if not kicked then
         -- Revert rotation if no kick worked
-        ap.rotation = old_rotation
-        ap.shape = old_shape
-        ap.row = old_row
-        ap.column = old_col
+        ap.rotation, ap.shape, ap.row, ap.column = old_rotation, old_shape, old_row, old_col
     end
 end
 
