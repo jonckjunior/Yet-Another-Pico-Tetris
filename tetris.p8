@@ -19,7 +19,6 @@ function _init()
     menu = Menu:new()
     transition = Transition:new()
     music_flag = false
-    -- change_mode("playing")
 end
 
 function _update60()

@@ -273,7 +273,7 @@ function World:update_end_anim()
     end
 
     if ea.done and btnp(5) then
-        change_mode("menu")
+        transition:start("playing", "menu")
     end
 end
 

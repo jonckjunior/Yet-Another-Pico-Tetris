@@ -60,7 +60,10 @@ function Transition:update()
         self.timer = 0
 
         if self.target_mode == "playing" and music_flag then
-            music(21, 1000 * self.duration / 60, 4)
+            music(21, 1000 * 50 / 60, 4)
+        end
+        if self.target_mode == "menu" and music_flag then
+            music(12, 1000 * 50 / 60, 4)
         end
     elseif self.phase == "fade_in" and self.timer >= self.duration then
         self.active = false
