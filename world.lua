@@ -135,7 +135,7 @@ function World:new(challenge)
         right = { timer = 0, shift = 0, btn = 1, delta = 1 }
     }
 
-    w.held_piece = nil
+    -- w.held_piece = nil
     w.can_hold = true
     w.timer = {
         soft = 0,
@@ -146,13 +146,13 @@ function World:new(challenge)
     }
     w.is_tspin = false
     w.is_mini_tspin = false
-    w.last_action = nil
-    w.last_rotation_kick = nil
+    -- w.last_action = nil
+    -- w.last_rotation_kick = nil
     w.spawn_row = 2
     w.spawn_column = 5
     w.spawn_rotation = 1
     w.animation = {
-        type = nil,   -- "line_clear", "tspin"
+        -- type = nil,   -- "line_clear", "tspin"
         timer = 0,    -- Animation frame counter
         lines = {},   -- Array of line numbers being cleared
         duration = 12 -- Animation length in frames
@@ -172,13 +172,13 @@ function World:new(challenge)
 
     -- Shared end-state animation (victory and defeat both use this)
     w.end_anim = {
-        mode         = nil,  -- "victory" or "defeat", set when the state changes
+        -- mode         = nil,  -- "victory" or "defeat", set when the state changes
         pops         = {},   -- active pop animations: {row, col, timer, duration, color}
         pop_timer    = 0,    -- counts up; triggers a new pop every pop_interval frames
         pop_interval = 6,    -- current interval (recalculated each frame)
         done         = false -- all blocks cleared and last pop finished
     }
-    w.time_remaining = nil
+    -- w.time_remaining = nil
     w.time_mode = "countup"
     w.frame_lo = 0
     w.secs_hi, w.secs_lo = 0, 0
@@ -244,8 +244,6 @@ end
 ---Shared update for both VICTORY and GAME_OVER end-state animations
 function World:update_end_anim()
     local ea = self.end_anim
-    local is_defeat = (ea.mode == "defeat")
-
     -- Advance each active pop
     local still_popping = {}
     for _, pop in ipairs(ea.pops) do
@@ -273,7 +271,7 @@ function World:update_end_anim()
         ea.done = true
     end
 
-    if ea.done and btnp(5) then
+    if self.can_finish_game==true and (btnp(5) or btnp(4))  then
         transition:start("playing", "menu")
     end
 end
@@ -972,16 +970,17 @@ function World:draw_end_anim()
     palt(0, false)
     for _, pop in ipairs(ea.pops) do
         local flash_frames = is_defeat and 7 or 4 -- defeat holds the flash longer
+        local bs = self.block_size
         if pop.timer >= flash_frames then
             local progress = (pop.timer - flash_frames) / (pop.duration - flash_frames)
-            local height   = self.block_size * (1 - progress)
-            local x        = self.board_x + (pop.col - 1) * self.block_size
-            local y        = self.board_y + (pop.row - 1) * self.block_size + (self.block_size - height) / 2
-            rectfill(x, y, x + self.block_size - 1, y + height - 1, pop.flash_col)
+            local height   = bs * (1 - progress)
+            local x        = self.board_x + (pop.col - 1) * bs
+            local y        = self.board_y + (pop.row - 1) * bs + (bs - height) / 2
+            rectfill(x, y, x + bs - 1, y + height - 1, pop.flash_col)
         else
-            local x = self.board_x + (pop.col - 1) * self.block_size
-            local y = self.board_y + (pop.row - 1) * self.block_size
-            rectfill(x, y, x + self.block_size - 1, y + self.block_size - 1, pop.flash_col)
+            local x = self.board_x + (pop.col - 1) * bs
+            local y = self.board_y + (pop.row - 1) * bs
+            rectfill(x, y, x + bs - 1, y + bs - 1, pop.flash_col)
         end
     end
     palt(0, true)
@@ -998,16 +997,16 @@ function World:draw_end_anim()
 end
 
 function World:draw_end_stats()
-    local y = 68
     local ls = "score:"..self:score_str()
     local rs = "best: "..self:hs_str()
-    print(ls, 32 - #ls*2, y, 5)       -- centered in left half (0-63)
-    print(rs, 96 - #rs*2, y, 5)       -- centered in right half (64-127)
-    y += 8
+    print(ls, 32 - #ls*2, 68, 5)       -- centered in left half (0-63)
+    print(rs, 96 - #rs*2, 68, 5)       -- centered in right half (64-127)
     ls = "time: "..self:get_time()
     rs = "bst t:"..self:hs_time_str()
-    print(ls, 32 - #ls*2, y, 5)
-    print(rs, 96 - #rs*2, y, 5)
+    print(ls, 32 - #ls*2, 76, 5)
+    print(rs, 96 - #rs*2, 76, 5)
+    local msg = "🅾️/❎ to return"
+    print(msg, 64-#msg*2, 88, 6)
 end
 
 function World:draw_defeat_banner(t)
@@ -1018,7 +1017,10 @@ function World:draw_defeat_banner(t)
     rectfill(0, cy, 127, cy + h - 1, 0)
     if t > 30 then
         print("game over", 45, 54, 1)
-        if t > 60 then self:draw_end_stats() end
+        if t > 120 then
+            self:draw_end_stats()
+            self.can_finish_game=true
+        end
     end
 end
 
@@ -1029,7 +1031,10 @@ function World:draw_victory_banner(t)
     rectfill(0, 127 - h, 127, 127, 0)
     if t > 30 then
         print("victory!", 48, 60, 7)
-        if t > 60 then self:draw_end_stats() end
+        if t > 150 then
+            self:draw_end_stats()
+            self.can_finish_game=true
+        end
     end
 end
 
