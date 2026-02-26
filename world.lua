@@ -237,15 +237,13 @@ function World:update_world()
     if self.challenge.is_defeat and self.challenge.is_defeat(self) then
         self.state = WORLD_STATE.GAME_OVER
         self.end_anim.mode = "defeat"
+        music(-1)
     end
 end
 
 ---Shared update for both VICTORY and GAME_OVER end-state animations
 function World:update_end_anim()
     local ea = self.end_anim
-    if ea.done then
-        sfx(-1, 3)
-    end
     -- Advance each active pop
     local still_popping = {}
     for _, pop in ipairs(ea.pops) do
@@ -616,6 +614,7 @@ function World:finish_turn()
     if self.challenge.is_victory and self.challenge.is_victory(self) then
         self.state = WORLD_STATE.VICTORY
         self.end_anim.mode = "victory"
+        music(-1)
         return
     end
     self:spawn_next_piece()
@@ -628,12 +627,14 @@ function World:spawn_next_piece()
         if self.grid[2][column] ~= self.grid_spr then
             self.state = WORLD_STATE.GAME_OVER
             self.end_anim.mode = "defeat"
+            music(-1)
         end
     end
 
     if not self:can_move(0, 0) then
         self.state = WORLD_STATE.GAME_OVER
         self.end_anim.mode = "defeat"
+        music(-1)
     end
 end
 
@@ -648,13 +649,13 @@ function World:create_particles_for_line_clear()
                 local sprite_color = sget((sprite_idx % 16) * 8 + 3, flr(sprite_idx / 16) * 8 + 3)
 
                 -- Get block center position
-                local block_x = self.board_x + (column - 1) * self.block_size + self.block_size / 2
-                local block_y = self.board_y + (cleared_row - 1) * self.block_size + self.block_size / 2
+                local block_x = self.board_x + (column - 1) * 6 + 6 / 2
+                local block_y = self.board_y + (cleared_row - 1) * 6 + 6 / 2
 
                 -- Create particles based on number of lines cleared
                 for i = 1, particles_per_block do
-                    local px = block_x + (rnd(self.block_size) - self.block_size / 2)
-                    local py = block_y + (rnd(self.block_size) - self.block_size / 2)
+                    local px = block_x + (rnd(6) - 6 / 2)
+                    local py = block_y + (rnd(6) - 6 / 2)
                     add(self.particles, Particle:new(px, py, sprite_color))
                 end
             end
@@ -749,11 +750,11 @@ function World:update_score(score_type, amount)
         local time_bonus = { 60 * 3, 60 * 5, 60 * 8, 60 * 12 } -- 3s, 5s, 8s, 12s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "tspin" then
-        local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
+        local points = { [0] = 100, 400, 800, 1200, 1600 }
         local time_bonus = { 60 * 5, 60 * 10, 60 * 15, 60 * 20 } -- 5s, 10s, 15s, 20s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "mini_tspin" then
-        local points = { [0] = 100, [1] = 200, [2] = 400 }
+        local points = { [0] = 100, 200, 400 }
         local time_bonus = { 60 * 3, 60 * 6 } -- 3s, 6s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "soft_drop" then
@@ -788,8 +789,9 @@ function World:save_hs()
     
     if self.time_mode == "countdown" then
         -- higher remaining time = better
-        if no_best or self.time_remaining > thi*6000+tlo then
-            dset(s+20, self.time_remaining)
+        local rem_secs = self.time_remaining \ 60  -- frames → seconds
+        if no_best or rem_secs > thi * 6000 + tlo then
+            dset(s+20, rem_secs)
             dset(s+30, 0)
         end
     else
@@ -922,9 +924,10 @@ end
 ---@param delta_column integer
 ---@return boolean
 function World:can_move(delta_row, delta_column)
-    for _, block in pairs(self.active_piece.shape) do
-        local block_row = self.active_piece.row + delta_row + block[1]
-        local block_column = self.active_piece.column + delta_column + block[2]
+    local ap = self.active_piece
+    for block in all(ap.shape) do
+        local block_row = ap.row + delta_row + block[1]
+        local block_column = ap.column + delta_column + block[2]
 
         if not self:is_position_valid(block_row, block_column) then
             return false
@@ -1024,7 +1027,7 @@ function World:draw_end_stats()
     print(ls, 32 - #ls*2, 76, 5)
     print(rs, 96 - #rs*2, 76, 5)
     local msg = "🅾️/❎ to return"
-    print(msg, 64-#msg*2, 88, 6)
+    print(msg, 64-#msg*2-4, 88, 6)
 end
 
 function World:draw_defeat_banner(t)
@@ -1033,9 +1036,10 @@ function World:draw_defeat_banner(t)
     local cy = 64
     rectfill(0, cy - h, 127, cy - 1, 0)
     rectfill(0, cy, 127, cy + h - 1, 0)
-    if t > 30 then
+    if t == 15 then sfx(59) end
+    if t > 60 then
         print("game over", 45, 54, 1)
-        if t > 120 then
+        if t > 160 then
             self:draw_end_stats()
             self.can_finish_game=true
         end
@@ -1047,7 +1051,8 @@ function World:draw_victory_banner(t)
     if t > 60 then h = min(64, 16 + (t - 60)) end
     rectfill(0, 0, 127, h, 0)
     rectfill(0, 127 - h, 127, 127, 0)
-    if t > 30 then
+    if t == 30 then sfx(58) end
+    if t > 60 then
         print("victory!", 48, 60, 7)
         if t > 150 then
             self:draw_end_stats()

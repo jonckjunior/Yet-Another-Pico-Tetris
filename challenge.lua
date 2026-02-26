@@ -64,7 +64,7 @@ CHALLENGES = {
     ),
     Challenge:new("quickie", "clear 15 lines in 3 minutes",
         function(world) -- victory
-            return world.lines_cleared >= 15 and world.frame_count <= 60 * 60 * 3
+            return world.lines_cleared >= 1 and world.frame_count <= 60 * 60 * 3
         end,
         function(world) -- defeat
             return world.frame_count > 60 * 60 * 3
