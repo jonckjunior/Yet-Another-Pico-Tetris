@@ -630,8 +630,7 @@ function World:spawn_next_piece()
 end
 
 function World:create_particles_for_line_clear()
-    local columns = #self.grid[1]
-    local particles_per_block = 1 + #self.animation.lines
+    local columns, particles_per_block = #self.grid[1], 1 + #self.animation.lines
     for _, cleared_row in ipairs(self.animation.lines) do
         for column = 1, columns do
             local sprite_idx = self.grid[cleared_row][column]
@@ -704,10 +703,8 @@ end
 ---Returns a table with the lines that are currently completed and need to be cleared and the score type if any.
 ---@return table, string|nil
 function World:check_line_completion()
-    local lines_completed = 0
-    local completed_rows = {}
-    local rows = #self.grid
-    local columns = #self.grid[1]
+    local lines_completed, completed_rows = 0, {}
+    local rows, columns = #self.grid, #self.grid[1]
 
     for row = rows, 1, -1 do
         local full = true
@@ -740,16 +737,16 @@ end
 ---@param amount integer
 function World:update_score(score_type, amount)
     if score_type == "lines" then
-        local points = { [1] = 100, [2] = 300, [3] = 500, [4] = 800 }
-        local time_bonus = { [1] = 60 * 3, [2] = 60 * 5, [3] = 60 * 8, [4] = 60 * 12 } -- 3s, 5s, 8s, 12s
+        local points = { 100, 300, 500, 800 }
+        local time_bonus = { 60 * 3, 60 * 5, 60 * 8, 60 * 12 } -- 3s, 5s, 8s, 12s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "tspin" then
         local points = { [0] = 100, [1] = 400, [2] = 800, [3] = 1200, [4] = 1600 }
-        local time_bonus = { [1] = 60 * 5, [2] = 60 * 10, [3] = 60 * 15, [4] = 60 * 20 } -- 5s, 10s, 15s, 20s
+        local time_bonus = { 60 * 5, 60 * 10, 60 * 15, 60 * 20 } -- 5s, 10s, 15s, 20s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "mini_tspin" then
         local points = { [0] = 100, [1] = 200, [2] = 400 }
-        local time_bonus = { [1] = 60 * 3, [2] = 60 * 6 } -- 3s, 6s
+        local time_bonus = { 60 * 3, 60 * 6 } -- 3s, 6s
         self:update_score_line_clear(points, time_bonus, amount)
     elseif score_type == "soft_drop" then
         self:add_score(amount)
@@ -767,11 +764,21 @@ function World:hs_slot()
 end
 
 function World:save_hs()
+    if self.state == WORLD_STATE.GAME_OVER and self.challenge.is_victory ~= nil then
+        return
+    end
     local s = self:hs_slot()
-    local bhi, blo = dget(s + 10), dget(s)
-    if self.score_hi > bhi or (self.score_hi == bhi and self.score_lo > blo) then
+    local bhi, blo = dget(s+10), dget(s)
+    local no_score = bhi == 0 and blo == 0
+    if no_score or self.score_hi > bhi or (self.score_hi == bhi and self.score_lo > blo) then
         dset(s, self.score_lo)
-        dset(s + 10, self.score_hi)
+        dset(s+10, self.score_hi)
+    end
+    local thi, tlo = dget(s+30), dget(s+20)
+    local no_best = thi == 0 and tlo == 0
+    if no_best or self.secs_hi < thi or (self.secs_hi == thi and self.secs_lo < tlo) then
+        dset(s+20, self.secs_lo)
+        dset(s+30, self.secs_hi)
     end
 end
 
@@ -784,6 +791,16 @@ function World:hs_str()
         return tostring(hi) .. ls
     end
     return tostring(lo)
+end
+
+function World:hs_time_str()
+    local s = self:hs_slot()
+    local hi, lo = dget(s+30), dget(s+20)
+    if hi == 0 and lo == 0 then return "--:--" end
+    local total = hi*6000 + lo
+    local mins = total\60
+    local secs = total%60
+    return (mins<10 and "0"..mins or tostring(mins))..":"..(secs<10 and "0"..secs or tostring(secs))
 end
 
 function World:update_score_line_clear(points, time_bonus, amount)
@@ -981,9 +998,16 @@ function World:draw_end_anim()
 end
 
 function World:draw_end_stats()
-    print("score:" .. self:score_str(), 40, 68, 5)
-    print("best: " .. self:hs_str(), 40, 74, 5)
-    print("time: " .. self:get_time(), 40, 80, 5)
+    local y = 68
+    local ls = "score:"..self:score_str()
+    local rs = "best: "..self:hs_str()
+    print(ls, 32 - #ls*2, y, 5)       -- centered in left half (0-63)
+    print(rs, 96 - #rs*2, y, 5)       -- centered in right half (64-127)
+    y += 8
+    ls = "time: "..self:get_time()
+    rs = "bst t:"..self:hs_time_str()
+    print(ls, 32 - #ls*2, y, 5)
+    print(rs, 96 - #rs*2, y, 5)
 end
 
 function World:draw_defeat_banner(t)
@@ -993,7 +1017,7 @@ function World:draw_defeat_banner(t)
     rectfill(0, cy - h, 127, cy - 1, 0)
     rectfill(0, cy, 127, cy + h - 1, 0)
     if t > 30 then
-        print("game over", 44, 54, 1)
+        print("game over", 45, 54, 1)
         if t > 60 then self:draw_end_stats() end
     end
 end
@@ -1010,38 +1034,21 @@ function World:draw_victory_banner(t)
 end
 
 function World:draw_text_info()
-    local y_offset = 127 - 6 * 11
-    local x_offset = 2
-
-    print_centered("pieces", x_offset, self.board_x - 1, y_offset, self.ui_color)
-    y_offset += 6
-    print_centered(tostring(self.pieces_used), x_offset, self.board_x - 1, y_offset, self.ui_color)
-    y_offset += 12
-
-    print_centered("lines", x_offset, self.board_x - 1, y_offset, self.ui_color)
-    y_offset += 6
-    print_centered(tostring(self.lines_cleared), x_offset, self.board_x - 1, y_offset, self.ui_color)
-    y_offset += 12
-
-    print_centered("level", x_offset, self.board_x - 1, y_offset, self.ui_color)
-    y_offset += 6
-    print_centered(tostring(self.level), x_offset, self.board_x - 1, y_offset, self.ui_color)
-
-    y_offset += 12
-    print_centered("score", x_offset, self.board_x - 1, y_offset, self.ui_color)
-    y_offset += 6
-    print_centered(self:score_str(), x_offset, self.board_x - 1, y_offset, self.ui_color)
-
-    y_offset = 127 - 6 * 5
-    x_offset = self.board_x + self.block_size * #self.grid[1] + 2
-    print_centered("mode", x_offset, 127, y_offset, self.ui_color)
-    y_offset += 6
-    print_centered(tostring(self.challenge.name), x_offset, 127, y_offset, self.ui_color)
-
-    y_offset += 12
-    print_centered("timer", x_offset, 127, y_offset, self.ui_color)
-    y_offset += 6
-    print_centered(self:get_time(), x_offset, 127, y_offset, self.ui_color)
+    local bx,uc = self.board_x-1, self.ui_color
+    local x,y = 2, 127-6*13
+    local function pc(label,val,x2)
+        print_centered(label,x,x2,y,uc)
+        y+=6
+        print_centered(val,x,x2,y,uc)
+        y+=12
+    end
+    pc("pieces",tostring(self.pieces_used),bx)
+    pc("lines",tostring(self.lines_cleared),bx)
+    pc("level",tostring(self.level),bx)
+    pc("score",self:score_str(),bx)
+    x,y = bx+self.block_size*#self.grid[1]+3, 127-6*5
+    pc("mode",self.challenge.name,127)
+    pc("timer",self:get_time(),127)
 end
 
 function World:score_str()

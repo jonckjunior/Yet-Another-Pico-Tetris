@@ -89,7 +89,7 @@ CHALLENGES = {
     ),
     Challenge:new("expert", "reach level 20",
         function(world) -- victory
-            return world.level >= 5
+            return world.level >= 20
         end,
         no_defeat(),
         no_update(),
@@ -121,8 +121,7 @@ CHALLENGES = {
         no_init()
     ),
     Challenge:new("tight", "you only have 6 columns",
-        function(world)
-        end,
+        nil,
         no_defeat(),
         function(world) -- on update
             local rows = #world.grid
@@ -173,9 +172,7 @@ CHALLENGES = {
         end
     ),
     Challenge:new("rush", "clear lines to gain time,survive as long as possible",
-        function(world) -- victory - no win condition, just survive
-            return false
-        end,
+        nil,
         function(world) -- defeat - run out of time
             return world.time_remaining <= 0
         end,
