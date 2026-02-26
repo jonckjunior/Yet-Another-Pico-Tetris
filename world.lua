@@ -600,7 +600,7 @@ end
 ---@param completed_rows table
 ---@param score_type string
 function World:prepare_line_completion_animation(completed_rows, score_type)
-    sfx(4, 1)
+    sfx(4, 2)
     self.animation.type = score_type
     self.animation.timer = 0
     self.animation.lines = completed_rows
