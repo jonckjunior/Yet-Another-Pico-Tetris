@@ -10,7 +10,8 @@ return n end function n:reset_action_state()self.last_action=nil self.last_rotat
 if self.state==e.PLAYING do self.frame_lo+=1if(self.frame_lo>=60)self.frame_lo=0self.secs_hi,self.secs_lo=g(self.secs_hi,self.secs_lo,1,6000)
 if(self.challenge.on_update)self.challenge.on_update(self)
 self:handle_input_playing()self:handle_auto_drop()self:update_particles()self:update_drop_trails()elseif self.state==e.LINE_CLEAR do self:update_line_clear_animation()elseif self.state==e.GAME_OVER do self:update_particles()self:update_drop_trails()self:update_end_anim()elseif self.state==e.VICTORY do self:update_particles()self:update_drop_trails()self:update_end_anim()end if(self.challenge.is_defeat and self.challenge.is_defeat(self))self.state=e.GAME_OVER self.end_anim.mode="defeat"
-end function n:update_end_anim()local n,e=self.end_anim,{}for o,n in ipairs(n.pops)do n.timer+=1if(n.timer==n.duration)self:spawn_end_particles(n)
+end function n:update_end_anim()local n=self.end_anim if(n.done)sfx(-1,3)
+local e={}for o,n in ipairs(n.pops)do n.timer+=1if(n.timer==n.duration)self:spawn_end_particles(n)
 if(n.timer<n.duration)add(e,n)
 end n.pops=e local e=self:end_anim_count_filled()if e>0do n.pop_interval=max(2,6-flr((1-e/220)*4))n.pop_timer+=1if(n.pop_timer>=n.pop_interval)n.pop_timer=0self:end_anim_pop_random_block()
 elseif#n.pops==0do if(not n.done)self:save_hs()
@@ -19,9 +20,10 @@ end function n:end_anim_count_filled()local n=0for e=2,#self.grid do for o=1,#se
 end end return n end function n:end_anim_pop_random_block()local n={}for e=2,#self.grid do for o=1,#self.grid[e]do if(self.grid[e][o]~=self.grid_spr)add(n,{row=e,col=o,spr=self.grid[e][o]})
 end end if(#n==0)return
 local n=n[flr(rnd(#n))+1]local e=n.spr local o,e=sget(e%16*8+3,flr(e/16)*8+3),self.end_anim local l=e.mode=="defeat"and 1or 7self.grid[n.row][n.col]=self.grid_spr if(e.mode=="victory")self.shake_x,self.shake_y=3,3
-add(e.pops,{row=n.row,col=n.col,color=o,flash_col=l,timer=0,duration=12})end function n:spawn_end_particles(n)local l,d,e=self.board_x+(n.col-1)*self.block_size+self.block_size/2,self.board_y+(n.row-1)*self.block_size+self.block_size/2,self.end_anim.mode=="defeat"local t,n=e and 2or 4,e and 1or n.color for e=1,t do local e,l=l+(rnd(self.block_size)-self.block_size/2),d+(rnd(self.block_size)-self.block_size/2)add(self.particles,o:new(e,l,n))end end function n:update_line_clear_animation()self.animation.timer+=1if(self.animation.timer>=self.animation.duration)self.state=e.PLAYING self:clear_completed_lines()self:finish_turn()
-end function n:update_particles()local e={}for o,n in ipairs(self.particles)do n:update()if(n:is_alive())add(e,n)
-end self.particles=e end function n:update_drop_trails()local e={}for o,n in ipairs(self.drop_trails)do n.timer+=1local o=n.timer/n.duration local o=1-(1-o)*(1-o)n.current_top=n.start_y+(n.end_y-n.start_y)*o if(n.timer<n.duration)add(e,n)
+if(e.mode=="defeat")sfx(61,3)else sfx(60,3)
+add(e.pops,{row=n.row,col=n.col,color=o,flash_col=l,timer=0,duration=12})end function n:spawn_end_particles(n)local l,d,e=self.board_x+(n.col-1)*6+3,self.board_y+(n.row-1)*6+3,self.end_anim.mode=="defeat"local t,n=e and 2or 4,e and 1or n.color for e=1,t do local e,l=l+rnd(6)-3,d+rnd(6)-3add(self.particles,o:new(e,l,n))end end function n:update_line_clear_animation()self.animation.timer+=1if(self.animation.timer>=self.animation.duration)self.state=e.PLAYING self:clear_completed_lines()self:finish_turn()
+end function n:update_particles()local e={}for n in all(self.particles)do n:update()if(n:is_alive())add(e,n)
+end self.particles=e end function n:update_drop_trails()local e={}for n in all(self.drop_trails)do n.timer+=1local o=n.timer/n.duration local o=1-(1-o)*(1-o)n.current_top=n.start_y+(n.end_y-n.start_y)*o if(n.timer<n.duration)add(e,n)
 end self.drop_trails=e end function n:create_drop_trails(o)local e=self.active_piece for n in all(e.shape)do local t,o,d=e.column+n[2],o+n[1],e.row+n[1]if(d>o)local l,n=self.board_y,self.block_size local n={x=self.board_x+(t-1)*n+n/2,start_y=l+(o-1)*n,end_y=l+(d-1)*n,current_top=l+(o-1)*n,color=e.spr,timer=0,duration=5}add(self.drop_trails,n)
 end end function n:handle_input_playing()for e,n in pairs(self.das)do if(btnp(n.btn)and self:can_move(0,n.delta))self.active_piece.column+=n.delta self.last_action="movement"if(stat(49)==-1)sfx(7,3)
 if btn(n.btn)do n.timer+=1local e=n.shift==0and 10or 2if n.timer>=e do n.timer=0n.shift+=1if(self:can_move(0,n.delta))self.active_piece.column+=n.delta self.last_action="movement"if(stat(49)==-1)sfx(7,3)
@@ -223,8 +225,8 @@ __sfx__
 001800201b1001a1001b1001b1001b1001b1001b1001a1001b1001b1001b1001b1001b1001a1001b1001f1001a100181001610016100161001610016100161000000000000000000000000000000000000000000
 001800200f1000c1000f100081000f1000c1000f100081000f1000c1000f1000a100111000e100111000a100111000e100111000a100111000e100111000a100111000e100111000000000000000000000000000
 001800201b1001a1001b1001b1001b1001b1001b1001a1001b1001b1001b1001b1001b1001a1001b1001f1001d1001d1001d1001d1001d1001d1001d1001d1000000000000000000000000000000000000000000
-001800202b700297002b7002b7002b7002b7002b700297002b7002b7002b7002b7002b700297002b7002e70029700277002670026700267002670026700267000000000000000000000000000000000000000000
-001800202b700297002b7002b7002b7002b7002b700297002b7002b7002b7002b7002b700297002b7002e7002e7002e7002e7002e7002e7002e7002e7002e7000000000000000000000000000000000000000000
+0006002020113297002b7002b7002b7002b7002b700297002b7002b7002b7002b7002b700297002b7002e70029700277002670026700267002670026700267000000000000000000000000000000000000000000
+000800200a1132b7002b7002b7002b7002b700297002b7002b7002b7002b7002b700297002b7002e7002e7002e7002e7002e7002e7002e7002e7002e700000000000000000000000000000000000000000000000
 0003000004750047500a7500a75000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00060000007531a603006030570305703047030470307703037030060300603006030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003
 __music__

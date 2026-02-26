@@ -243,6 +243,9 @@ end
 ---Shared update for both VICTORY and GAME_OVER end-state animations
 function World:update_end_anim()
     local ea = self.end_anim
+    if ea.done then
+        sfx(-1, 3)
+    end
     -- Advance each active pop
     local still_popping = {}
     for _, pop in ipairs(ea.pops) do
@@ -313,6 +316,11 @@ function World:end_anim_pop_random_block()
         self.shake_x, self.shake_y = 3, 3
     end
 
+    if ea.mode == "defeat" then
+        sfx(61, 3)
+    else
+        sfx(60, 3)
+    end
 
     add(ea.pops, {
         row       = chosen.row,
@@ -327,15 +335,15 @@ end
 ---Burst particles from the centre of a finished pop
 ---@param pop table
 function World:spawn_end_particles(pop)
-    local bx = self.board_x + (pop.col - 1) * self.block_size + self.block_size / 2
-    local by = self.board_y + (pop.row - 1) * self.block_size + self.block_size / 2
+    local bx = self.board_x + (pop.col - 1) * 6 + 3
+    local by = self.board_y + (pop.row - 1) * 6 + 3
     local is_defeat = (self.end_anim.mode == "defeat")
     -- Defeat gets 2 dim particles; victory gets 4 bright ones
     local count = is_defeat and 2 or 4
     local color = is_defeat and 1 or pop.color
     for i = 1, count do
-        local px = bx + (rnd(self.block_size) - self.block_size / 2)
-        local py = by + (rnd(self.block_size) - self.block_size / 2)
+        local px = bx + rnd(6) - 3
+        local py = by + rnd(6) - 3
         add(self.particles, Particle:new(px, py, color))
     end
 end
@@ -352,7 +360,7 @@ end
 
 function World:update_particles()
     local alive_particles = {}
-    for _, particle in ipairs(self.particles) do
+    for particle in all(self.particles) do
         particle:update()
         if particle:is_alive() then
             add(alive_particles, particle)
@@ -363,7 +371,7 @@ end
 
 function World:update_drop_trails()
     local active_trails = {}
-    for _, trail in ipairs(self.drop_trails) do
+    for trail in all(self.drop_trails) do
         trail.timer += 1
 
         -- Eased progression (quad ease-out for snappy feel)
