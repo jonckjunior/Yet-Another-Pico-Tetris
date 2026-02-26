@@ -13,7 +13,6 @@ function _init()
     cartdata("yapt")
     -- enables hidden colors
     poke(0x5f2e, 1)
-    DEBUG = false
     drk = { [0] = 0, 0, 1, 1, 2, 1, 5, 6, 2, 4, 9, 3, 1, 1, 2, 5 }
     mode = "menu"
     world = nil
@@ -43,7 +42,7 @@ function _draw()
     end
 
     if transition.active then transition:draw() end
-    print_debug()
+    -- print_debug()
 end
 
 function change_mode(new_mode)
@@ -54,16 +53,16 @@ function change_mode(new_mode)
     mode = new_mode
 end
 
-function debug(str)
-    add(debug_list, str)
-end
+-- function debug(str)
+--     add(debug_list, str)
+-- end
 
-function print_debug()
-    for d in all(debug_list) do
-        print(d, 50, 50, 7)
-    end
-    debug_list = {}
-end
+-- function print_debug()
+--     for d in all(debug_list) do
+--         print(d, 50, 50, 7)
+--     end
+--     debug_list = {}
+-- end
 
 __gfx__
 0000000077777600eeeee800aaaaa90077777f0066666d0077777a00fffffe000000000000000000000000000000000000000000000000000000000000000000

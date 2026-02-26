@@ -125,7 +125,6 @@ function World:new(challenge)
     w.drop_interval = w.drop_interval_max
     w.block_size = 6
     w.state = WORLD_STATE.PLAYING
-    w.score = 0
     w.level = 1
     w.lines_cleared = 0
     w.board_x = (127 - #w.grid[1] * w.block_size) / 2
@@ -384,18 +383,20 @@ end
 ---Create drop trails for hard drop animation
 ---@param original_row integer
 function World:create_drop_trails(original_row)
-    for _, block in pairs(self.active_piece.shape) do
-        local block_col = self.active_piece.column + block[2]
+    local ap = self.active_piece
+    for block in all(ap.shape) do
+        local block_col = ap.column + block[2]
         local original_block_row = original_row + block[1]
-        local final_block_row = self.active_piece.row + block[1]
+        local final_block_row = ap.row + block[1]
 
         if final_block_row > original_block_row then
+            local by, bs = self.board_y, self.block_size
             local trail = {
-                x = self.board_x + (block_col - 1) * self.block_size + self.block_size / 2,
-                start_y = self.board_y + (original_block_row - 1) * self.block_size,
-                end_y = self.board_y + (final_block_row - 1) * self.block_size,
-                current_top = self.board_y + (original_block_row - 1) * self.block_size,
-                color = self.active_piece.spr,
+                x = self.board_x + (block_col - 1) * bs + bs / 2,
+                start_y = by + (original_block_row - 1) * bs,
+                end_y = by + (final_block_row - 1) * bs,
+                current_top = by + (original_block_row - 1) * bs,
+                color = ap.spr,
                 timer = 0,
                 duration = 5
             }
@@ -490,6 +491,7 @@ end
 
 ---Swap between the piece held and the active piece. If no piece held, then just insert active piece in held position.
 function World:handle_hold()
+    if self.challenge.no_hold == true then return end
     self.can_hold = false
     if self.held_piece == nil then
         -- just store the active piece in the held position
@@ -603,7 +605,7 @@ end
 
 function World:finish_turn()
     self.active_piece = nil
-    if self.challenge.is_victory(self) then
+    if self.challenge.is_victory and self.challenge.is_victory(self) then
         self.state = WORLD_STATE.VICTORY
         self.end_anim.mode = "victory"
         return
@@ -765,6 +767,7 @@ function World:save_hs()
     if self.state == WORLD_STATE.GAME_OVER and self.challenge.is_victory ~= nil then
         return
     end
+    
     local s = self:hs_slot()
     local bhi, blo = dget(s+10), dget(s)
     local no_score = bhi == 0 and blo == 0
@@ -774,9 +777,19 @@ function World:save_hs()
     end
     local thi, tlo = dget(s+30), dget(s+20)
     local no_best = thi == 0 and tlo == 0
-    if no_best or self.secs_hi < thi or (self.secs_hi == thi and self.secs_lo < tlo) then
-        dset(s+20, self.secs_lo)
-        dset(s+30, self.secs_hi)
+    
+    if self.time_mode == "countdown" then
+        -- higher remaining time = better
+        if no_best or self.time_remaining > thi*6000+tlo then
+            dset(s+20, self.time_remaining)
+            dset(s+30, 0)
+        end
+    else
+        -- lower elapsed = better
+        if no_best or self.secs_hi < thi or (self.secs_hi == thi and self.secs_lo < tlo) then
+            dset(s+20, self.secs_lo)
+            dset(s+30, self.secs_hi)
+        end
     end
 end
 
@@ -795,10 +808,7 @@ function World:hs_time_str()
     local s = self:hs_slot()
     local hi, lo = dget(s+30), dget(s+20)
     if hi == 0 and lo == 0 then return "--:--" end
-    local total = hi*6000 + lo
-    local mins = total\60
-    local secs = total%60
-    return (mins<10 and "0"..mins or tostring(mins))..":"..(secs<10 and "0"..secs or tostring(secs))
+    return fmt_time(hi*6000 + lo)
 end
 
 function World:update_score_line_clear(points, time_bonus, amount)
@@ -1051,7 +1061,7 @@ function World:draw_text_info()
     pc("lines",tostring(self.lines_cleared),bx)
     pc("level",tostring(self.level),bx)
     pc("score",self:score_str(),bx)
-    x,y = bx+self.block_size*#self.grid[1]+3, 127-6*5
+    x,y = bx+self.block_size*#self.grid[1]+3, 97
     pc("mode",self.challenge.name,127)
     pc("timer",self:get_time(),127)
 end
@@ -1066,12 +1076,18 @@ function World:score_str()
 end
 
 function World:get_time()
-    local total_secs = self.secs_hi * 6000 + self.secs_lo
-    local mins = flr(total_secs / 60)
-    local secs = total_secs % 60
-    local ms = tostring(mins < 10 and "0" .. mins or mins)
-    local ss = tostring(secs < 10 and "0" .. secs or secs)
-    return ms .. ":" .. ss
+    local total_secs
+    if self.time_mode == "countdown" then
+        total_secs = self.time_remaining \ 60
+    else
+        total_secs = self.secs_hi * 6000 + self.secs_lo
+    end
+    return fmt_time(total_secs)
+end
+
+function fmt_time(total_secs)
+    local m,s=total_secs\60,total_secs%60
+    return (m<10 and "0"..m or tostring(m))..":"..(s<10 and "0"..s or tostring(s))
 end
 
 function print_centered(text, x_start, x_end, y, col)
@@ -1203,7 +1219,7 @@ end
 
 ---Draws the ghost piece on the screen
 function World:draw_ghost_piece()
-    if not self.active_piece then
+    if not self.active_piece or self.challenge.no_ghost == true then
         return
     end
     local ghost_row = self.active_piece.row

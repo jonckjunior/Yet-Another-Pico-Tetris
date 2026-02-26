@@ -87,13 +87,17 @@ CHALLENGES = {
         no_update(),
         no_init()
     ),
-    Challenge:new("expert", "reach level 20",
-        function(world) -- victory
-            return world.level >= 20
+    Challenge:new("expert", "reach level 10,no hold and no ghost",
+        function(world)
+            return world.level >= 10
         end,
         no_defeat(),
         no_update(),
-        no_init()
+        function(world)
+            world.challenge.no_ghost = true
+            world.challenge.no_hold = true
+            world.preview = 1
+        end
     ),
     Challenge:new("heavy g", "survive 2 minutes,blocks fall faster",
         function(world)
