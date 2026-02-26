@@ -260,12 +260,12 @@ function World:update_end_anim()
     local filled = self:end_anim_count_filled()
 
     if filled > 0 then
-        ea.pop_interval = max(2, 6 - flr((1 - filled / 220) * 4))
-        ea.pop_timer += 1
-        if ea.pop_timer >= ea.pop_interval then
-            ea.pop_timer = 0
+        local pops_this_frame = max(1, flr(filled / 44))
+    for i = 1, pops_this_frame do
+        if self:end_anim_count_filled() > 0 then
             self:end_anim_pop_random_block()
         end
+    end
     elseif #ea.pops == 0 then
         if not ea.done then self:save_hs() end
         ea.done = true
