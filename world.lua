@@ -269,6 +269,7 @@ function World:update_end_anim()
             self:end_anim_pop_random_block()
         end
     elseif #ea.pops == 0 then
+        if not ea.done then self:save_hs() end
         ea.done = true
     end
 
@@ -761,6 +762,30 @@ function World:add_score(amount)
     self.score_hi, self.score_lo = big_add(self.score_hi, self.score_lo, amount, 10000)
 end
 
+function World:hs_slot()
+    return self.challenge.index - 1
+end
+
+function World:save_hs()
+    local s = self:hs_slot()
+    local bhi, blo = dget(s + 10), dget(s)
+    if self.score_hi > bhi or (self.score_hi == bhi and self.score_lo > blo) then
+        dset(s, self.score_lo)
+        dset(s + 10, self.score_hi)
+    end
+end
+
+function World:hs_str()
+    local s = self:hs_slot()
+    local hi, lo = dget(s + 10), dget(s)
+    if hi > 0 then
+        local ls = tostring(lo)
+        while #ls < 4 do ls = "0" .. ls end
+        return tostring(hi) .. ls
+    end
+    return tostring(lo)
+end
+
 function World:update_score_line_clear(points, time_bonus, amount)
     self.lines_cleared += amount
     self.level = flr(self.lines_cleared / 10) + 1
@@ -955,14 +980,21 @@ function World:draw_end_anim()
     end
 end
 
+function World:draw_end_stats()
+    print("score:" .. self:score_str(), 40, 68, 5)
+    print("best: " .. self:hs_str(), 40, 74, 5)
+    print("time: " .. self:get_time(), 40, 80, 5)
+end
+
 function World:draw_defeat_banner(t)
     local h = min(16, t)
     if t > 60 then h = min(64, 16 + (t - 60)) end
     local cy = 64
     rectfill(0, cy - h, 127, cy - 1, 0)
     rectfill(0, cy, 127, cy + h - 1, 0)
-    if t > 10 then
-        print("game over", 44, 60, 1)
+    if t > 30 then
+        print("game over", 44, 54, 1)
+        if t > 60 then self:draw_end_stats() end
     end
 end
 
@@ -971,8 +1003,9 @@ function World:draw_victory_banner(t)
     if t > 60 then h = min(64, 16 + (t - 60)) end
     rectfill(0, 0, 127, h, 0)
     rectfill(0, 127 - h, 127, 127, 0)
-    if t > 10 then
+    if t > 30 then
         print("victory!", 48, 60, 7)
+        if t > 60 then self:draw_end_stats() end
     end
 end
 

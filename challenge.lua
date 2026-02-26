@@ -48,7 +48,7 @@ end
 CHALLENGES = {
     Challenge:new("casual", "clear 15 lines",
         function(world) -- victory
-            return world.lines_cleared >= 15
+            return world.lines_cleared >= 1
         end,
         no_defeat(),
         no_update(),
@@ -188,3 +188,5 @@ CHALLENGES = {
         end
     ),
 }
+
+for i, c in ipairs(CHALLENGES) do c.index = i end

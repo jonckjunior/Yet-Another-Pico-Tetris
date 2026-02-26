@@ -10,6 +10,7 @@ __lua__
 #include transition.lua
 
 function _init()
+    cartdata("yapt")
     -- enables hidden colors
     poke(0x5f2e, 1)
     DEBUG = false
