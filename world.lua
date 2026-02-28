@@ -872,49 +872,44 @@ function World:check_tspin()
     self.is_tspin = false
     self.is_mini_tspin = false
 
-    if self.active_piece.spr == 3 and self.last_action == "rotation" then -- T-piece only
-        local pivot_row = self.active_piece.row + 1
-        local pivot_col = self.active_piece.column + 1
-        local corners_map = {
-            [1] = {
-                A, B, C, D = { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 }
-            },
-            [2] = {
-                A, B, C, D = { -1, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 }
-            },
-            [3] = {
-                A, B, C, D = { 1, -1 }, { 1, 1 }, { -1, -1 }, { -1, 1 }
-            },
-            [4] = {
-                A, B, C, D = { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 }
-            }
-        }
+    local ap = self.active_piece
+    if ap.shapeId ~= "T" or self.last_action ~= "rotation" then
+        return
+    end
 
-        local corners = corners_map[self.active_piece.rotation]
+    local pivot_row = ap.row + 1
+    local pivot_col = ap.column + 1
 
-        local filled = { A = false, B = false, C = false, D = false }
-        for name, offset in pairs(corners) do
-            local c_row = pivot_row + offset[1]
-            local c_col = pivot_col + offset[2]
-            if not self:is_position_valid(c_row, c_col) or
-                self.grid[c_row][c_col] ~= self.grid_spr then
-                filled[name] = true
-            end
+    local corners_map = {
+        [1] = { A = { -1, -1 }, B = { -1, 1 }, C = { 1, -1 }, D = { 1, 1 } },
+        [2] = { A = { -1,  1 }, B = {  1, 1 }, C = { -1, -1 }, D = { 1, -1 } },
+        [3] = { A = {  1, -1 }, B = {  1, 1 }, C = { -1, -1 }, D = { -1, 1 } },
+        [4] = { A = { -1, -1 }, B = {  1, -1 }, C = { -1,  1 }, D = { 1, 1 } },
+    }
+
+    local corners = corners_map[ap.rotation]
+    local filled = { A = false, B = false, C = false, D = false }
+    for name, offset in pairs(corners) do
+        local c_row = pivot_row + offset[1]
+        local c_col = pivot_col + offset[2]
+        if not self:is_position_valid(c_row, c_col) or
+            self.grid[c_row][c_col] ~= self.grid_spr then
+            filled[name] = true
         end
+    end
 
-        local total_filled = 0
-        for is_filled in all(filled) do
-            if is_filled then total_filled += 1 end
-        end
+    local total_filled = 0
+    for is_filled in all(filled) do
+        if is_filled then total_filled += 1 end
+    end
 
-        if total_filled >= 3 then
-            if self.last_rotation_kick == 5 then
-                self.is_tspin = true
-            elseif filled.A and filled.B and (filled.C or filled.D) then
-                self.is_tspin = true
-            elseif filled.C and filled.D and (filled.A or filled.B) then
-                self.is_mini_tspin = true
-            end
+    if total_filled >= 3 then
+        if self.last_rotation_kick == 5 then
+            self.is_tspin = true
+        elseif filled.A and filled.B and (filled.C or filled.D) then
+            self.is_tspin = true
+        elseif filled.C and filled.D and (filled.A or filled.B) then
+            self.is_mini_tspin = true
         end
     end
 end
